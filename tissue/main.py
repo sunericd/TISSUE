@@ -11,8 +11,7 @@ import anndata as ad
 import warnings
 import os
 
-from utils import nan_weighted_std
-
+from . import utils.nan_weighted_std as nan_weighted_std
 
 
 def load_paired_datasets (spatial_counts, spatial_loc, RNAseq_counts, spatial_metadata = None,

@@ -8,8 +8,8 @@ import warnings
 import os
 import gc
 
-from utils import large_load, large_save
-
+from . import utils.large_load as large_load
+from . import utils.large_save as large_save
 
 
 def group_conformalize_from_intermediate(dataset_name, methods, symmetric, alpha_levels,
