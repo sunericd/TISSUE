@@ -6,8 +6,7 @@ from sklearn.preprocessing import StandardScaler
 import anndata as ad
 import os
 
-from . import main.build_calibration_scores as build_calibration_scores
-from . import main.get_spatial_uncertainty_scores_from_metadata as get_spatial_uncertainty_scores_from_metadata
+from .main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
 
 
 
