@@ -29,7 +29,7 @@ import scipy
 from pathlib import Path
 from sklearn.preprocessing import normalize
 
-from SpaGE.dimensionality_reduction import process_dim_reduction
+from tissue.SpaGE.dimensionality_reduction import process_dim_reduction
 
 class PVComputation:
     """

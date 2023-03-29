@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 import anndata as ad
 import os
 
-from .main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
+from tissue.main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
 
 
 
