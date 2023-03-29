@@ -27,7 +27,7 @@ pip install tissue-bio
 Another way to install the package along with associated test and tutorial files is to clone the directory and then install the requirements for using the package. To do this, first clone the repository using git (you can install git following the instructions [here](https://github.com/git-guides/install-git)):
 
 ```
-git clone https://github.com/sunericd/dynamicviz.git
+git clone https://github.com/sunericd/TISSUE.git
 ```
 
 We recommend setting up a conda environment to install the requirements for the package (instructions for installing conda and what conda environment can do can be found [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)). Installation of requirements can then be done with the following commands:
