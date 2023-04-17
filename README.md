@@ -36,7 +36,7 @@ We recommend setting up a conda environment to install the requirements for the 
 conda create -n tissue python=3.8
 conda activate tissue
 
-cd tissue
+cd TISSUE
 pip install -r requirements.txt
 ```
 
