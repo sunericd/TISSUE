@@ -1,3 +1,6 @@
+# Contains compound functions for generating results for experiments with TISSUE
+# These are unlikely to be used for general applications but were used in our development/testing of TISSUE
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +11,8 @@ import warnings
 import os
 import gc
 
-from tissue.utils import large_save, large_load
+#from tissue.utils import large_save, large_load
+from .utils import large_save, large_load
 
 
 def group_conformalize_from_intermediate(dataset_name, methods, symmetric, alpha_levels,

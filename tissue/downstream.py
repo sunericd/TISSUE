@@ -1,3 +1,5 @@
+# Contains functions for all downstream applications of TISSUE calibration scores and prediction intervals
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,7 +8,8 @@ from sklearn.preprocessing import StandardScaler
 import anndata as ad
 import os
 
-from tissue.main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
+#from tissue.main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
+from .main import build_calibration_scores, get_spatial_uncertainty_scores_from_metadata
 
 
 
@@ -24,6 +27,7 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, n_imp
                              if None, will compare against all values that are not group1
         n_imputations [int] - number of imputations to use
         symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
+        return_keys [bool] - whether to return the keys for which to access the results from adata
     '''
     # get uncertainties and scores from saved adata
     scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
@@ -113,6 +117,11 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, n_imp
 def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=False):
     '''
     Creates a new imputation by sampling from scores and adding to G
+    
+        G, G_stdev, groups - outputs of get_spatial_uncertainty_scores_from_metadata()
+        scores_flattened_dict - output of build_calibration_scores()
+    
+    See multiple_imputation_testing() for details of arguments
     '''
     new_scores = np.zeros(G.shape) # init array for sampled scores
     new_add_sub = np.zeros(G.shape) # init array for add/subtract coefs
@@ -156,9 +165,12 @@ def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict
 def get_ttest_stats(G, g1_bool, g2_bool):
     '''
     Computes mean_diff and pooled SD for each column of G independently
+    
+        G [array] - 2D array with columns as genes and rows as cells
+        g1_bool [bool array] - 1D array with length equal to number of rows in G; labels group1
+        g2_bool [bool array] - 1D array with length equal to number of rows in G; labels group2
     '''
     mean_diff = np.nanmean(G[g1_bool,:], axis=0) - np.nanmean(G[g2_bool,:], axis=0)
-    #pooled_sd = np.sqrt(2/n) * np.sqrt( 1/2*(np.nanvar(G[g1_bool,:],axis=0) + np.nanvar(G[g2_bool,:],axis=0)) )
     n1 = np.count_nonzero(~np.isnan(G[g1_bool,:]), axis=0)
     n2 = np.count_nonzero(~np.isnan(G[g2_bool,:]), axis=0)
     sp = np.sqrt( ( (n1-1)*(np.nanvar(G[g1_bool,:],axis=0)) + (n2-1)*(np.nanvar(G[g2_bool,:],axis=0)) ) / (n1+n2-2) )
@@ -169,9 +181,11 @@ def get_ttest_stats(G, g1_bool, g2_bool):
 
 def two_sample_ttest (G, g1_bool, g2_bool):
     '''
-    Computes two-sample t-test for unequal sample sizes
+    Computes two-sample t-test for unequal sample sizes using get_ttest_stats()
     
-    Use get_ttest_stats
+        G [array] - 2D array with columns as genes and rows as cells
+        g1_bool [bool array] - 1D array with length equal to number of rows in G; labels group1
+        g2_bool [bool array] - 1D array with length equal to number of rows in G; labels group2
     '''
     from scipy import stats
     # calculate t-stat
@@ -191,9 +205,7 @@ def pool_multiple_stats(stat_dict):
     '''
     Pool stats across multiple imputations for t-test
     
-    stat_dict [dict] - dictionary containing statistical testing results
-    #target_vars [arr] - target order of variable names
-    #current_vars [arr] - current order of variable names
+        stat_dict [dict] - dictionary containing statistical testing results
     '''
     from scipy import stats
     
@@ -220,11 +232,6 @@ def pool_multiple_stats(stat_dict):
         dof = (d-1)*(1+(d*var_w)/((d+1)*var_b))**2 # degrees of freedom for T distribution
         pval = 2*(1 - stats.t.cdf(np.abs(test_stat), dof))
         
-        # reorder accordingly so genes match up to target_vars
-        # _,sorting_idxs = np.where(target_vars[:,None] == current_vars)
-        # test_stat = test_stat[sorting_idxs]
-        # pval = pval[sorting_idxs]
-        
         # Add test statistic and pvalue
         results_dict["tstat"][key] = test_stat
         results_dict["pvalue"][key] = pval
@@ -238,8 +245,8 @@ def pool_multiple_stats(stat_dict):
 
 
 
-def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_pi_width", quantile_cutoff=None,
-                 n_components=15, replace_inf=None, binarize=False, binarize_ratio=100, log_transform=False,
+def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_pi_width", quantile_cutoff=None,
+                 n_components=15, replace_inf=None, binarize=0.2, binarize_ratio=10, log_transform=False,
                  scale=True, tag="", return_weights=False,):
     '''
     Runs weighted PCA using the "wpca" package: https://github.com/jakevdp/wpca
@@ -280,7 +287,6 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_pi_wid
         weights = 1/(adata.obsm[predicted+'_hi'][genes].values-adata.obsm[predicted+'_lo'][genes].values)
         weights = postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform)
     elif weighting == "inverse_norm_pi_width":
-        #weights = adata.obsm[predicted][genes].values/(adata.obsm[predicted+'_hi'][genes].values-adata.obsm[predicted+'_lo'][genes].values)
         weights = 1/(adata.obsm[predicted+'_hi'][genes].values-adata.obsm[predicted+'_lo'][genes].values)
         weights = weights / np.nanmean(weights, axis=0)
         weights = postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform)
@@ -290,7 +296,6 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_pi_wid
         weights = 1/np.abs(adata.obsm[predicted][genes].values - np.array(adata[:,genes].X))
         weights = postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform)
     elif weighting == "inverse_norm_residual":
-        #weights = adata.obsm[predicted][genes].values / np.abs(adata.obsm[predicted][genes].values - np.array(adata[:,genes].X))
         weights = 1/np.abs(adata.obsm[predicted][genes].values - np.array(adata[:,genes].X))
         weights = weights / np.nanmean(weights, axis=0)
         weights = postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform)
@@ -326,6 +331,8 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_pi_wid
 def postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform):
     '''
     Method for postprocessing weights (filter with cutoff, replace inf, etc) for weighted_PCA()
+    
+    Refer to weighted_pca() for details on arguments
     '''
     # cutoff weights
     if quantile_cutoff is not None:
@@ -339,7 +346,6 @@ def postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binariz
     # binarize weights
     if binarize is True:
         from skimage.filters import threshold_otsu
-        #cutoff = threshold_otsu(np.unique(weights[np.isfinite(weights)]))
         cutoff = threshold_otsu(weights[np.isfinite(weights)])
         weights[np.isfinite(weights) & (weights >= cutoff)] = 1
         weights[np.isfinite(weights) & (weights < cutoff)] = 1/binarize_ratio

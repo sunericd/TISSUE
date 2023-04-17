@@ -9,9 +9,9 @@ For a Quick Start guide, please refer to ``` tutorial.ipynb ```.
 
 ## Installation and setup
 
-### Option 1: PyPI
+### Future Option: PyPI
 
-Install the package through PyPI with ```pip```. We recommend setting up a conda environment (or another virtual environment) first since ```tissue-bio``` currently relies on specific versions for its dependencies (although it should generally work for other environment versions, but this hasn't been thoroughly tested):
+This will be an option for installing the final version of the software (TBD). Install the package through PyPI with ```pip```. We recommend setting up a conda environment (or another virtual environment) first since ```tissue-bio``` currently relies on specific versions for its dependencies (although it should generally work for other environment versions, but this hasn't been thoroughly tested):
 
 ```
 conda create -n myenv python=3.8
@@ -22,9 +22,9 @@ pip install tissue-bio
 
 
 
-### Option 2: Github
+### Current Option: Local installation
 
-Another way to install the package along with associated test and tutorial files is to clone the directory and then install the requirements for using the package. To do this, first clone the repository using git (you can install git following the instructions [here](https://github.com/git-guides/install-git)):
+The current way to install the package along with associated test and tutorial files is to clone the directory and then install the requirements for using the package. To do this, first clone the repository using git (you can install git following the instructions [here](https://github.com/git-guides/install-git)):
 
 ```
 git clone https://github.com/sunericd/TISSUE.git
@@ -39,6 +39,8 @@ conda activate tissue
 cd tissue
 pip install -r requirements.txt
 ```
+
+To keep the requirements light, we have only included packages that are necessary for the core functionalities of TISSUE. For additional utilities such as gene prediction with Tangram, please install those packages separately.
 
 To test that the installation is working correctly, you can use the Jupyter notebook ```tutorial.ipynb``` (requires installing Jupyter, instructions found [here](https://jupyter.org/install), and adding the conda environment we just created to the Jupyter notebook kernels, instructions found [here](https://medium.com/@nrk25693/how-to-add-your-conda-environment-to-your-jupyter-notebook-in-just-4-steps-abeab8b8d084)).
 
