@@ -1,13 +1,15 @@
 # TISSUE
 TISSUE (Transcript Imputation with Spatial Single-cell Uncertainty Estimation) provides tools for estimating well-calibrated uncertainty measures for gene expression predictions in single-cell spatial transcriptomics datasets and utilizing them in downstream analyses
 
-For a Quick Start guide, please refer to ``` tutorial.ipynb ```.
+For a Quick Start guide, please refer to ``` tutorial.ipynb ```. It should take less than 5 minutes to run all analyses in the tutorial notebook with a normal desktop/laptop setup.
 
 ![plot](./pipeline.png)
 
 
 
 ## Installation and setup
+
+Complete installation (including of dependencies) in a new Conda environment should take less than 10 minutes on a normal desktop/laptop setup (Windows, Mac OSX, Linux).
 
 ### Future Option: PyPI
 
