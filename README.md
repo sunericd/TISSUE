@@ -13,14 +13,14 @@ For TISSUE installation, we provide two options: (A) PyPI installation with pip 
 
 ### Option A: PyPI
 
-Install the package through PyPI with `pip`. We recommend setting up a conda environment (https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or another virtual environment first since `tissue-bio` currently relies on specific versions for its dependencies (although it should generally work for other environment versions, but this hasn't been thoroughly tested):
+Install the package through PyPI with `pip`. We recommend setting up a conda environment (https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or another virtual environment first since `tissue-sc` currently relies on specific versions for its dependencies (although it should generally work for other environment versions, but this hasn't been thoroughly tested):
 
 ```
 conda create -n myenv python=3.8
 conda activate myenv
 
 <pip install any additional dependencies>
-pip install tissue-bio
+pip install tissue-sc
 ```
 
 Note that you will want to separately download the data from this repository (`tests/data/`) to run our TISSUE tutorials.
@@ -326,123 +326,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
   <tbody>
     <tr>
       <th>0</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
+      <td>0.270633</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.255435</td>
+      <td>0.270633</td>
     </tr>
     <tr>
       <th>...</th>
@@ -470,123 +470,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
     </tr>
     <tr>
       <th>3400</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>3401</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>3402</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>3403</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
     <tr>
       <th>3404</th>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
+      <td>0.167865</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.159915</td>
+      <td>0.167865</td>
     </tr>
   </tbody>
 </table>
@@ -714,8 +714,8 @@ print("t-statistic = "+str(round(adata.uns['spage_A_B_tstat'][target_gene].value
 print("P = "+str(round(adata.uns['spage_A_B_pvalue'][target_gene].values[0],5)))
 ```
 
-    t-statistic = -1.83422
-    P = 0.07883
+    t-statistic = -2.73153
+    P = 0.00877
 
 
 Testing of our target gene (Plp1) results in significant under-expression in group A as compared to group B, suggesting that Plp1 could be a marker gene for the cell types / regions in group B.
@@ -764,7 +764,7 @@ print(adata_filtered.shape)
     (3405, 31)
     
     After TISSUE cell filtering:
-    (2872, 31)
+    (2875, 31)
 
 
 And similarly, we can check the balance in the two cell groups after filtering:
@@ -809,8 +809,8 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
     </tr>
     <tr>
       <th>Number of Cells</th>
-      <td>1254</td>
-      <td>1618</td>
+      <td>1255</td>
+      <td>1620</td>
     </tr>
   </tbody>
 </table>
@@ -868,8 +868,8 @@ print(f"Accuracy Score: {accuracy_score(test_labels, pred_test)}")
 print(f"ROC-AUC Score: {roc_auc_score(test_labels_num, pred_test_scores[:,1])}")
 ```
 
-    Accuracy Score: 0.8048780487804879
-    ROC-AUC Score: 0.8692123958843705
+    Accuracy Score: 0.782608695652174
+    ROC-AUC Score: 0.861074481074481
 
 
 The model performs quite well! It has high accuracy and high ROC-AUC for a relatively balanced binary classification problem. A similar approach can be taken to leverage TISSUE uncertainties in training/evaluating other model architectures (e.g. linear regression, random forest, neural nets).
@@ -908,7 +908,7 @@ PC_reduced = adata.uns['spage_predicted_expression_PC15_filtered_'].copy()
 print(PC_reduced.shape)
 ```
 
-    (2872, 15)
+    (2875, 15)
 
 
 We now have a reduced representation of our original data that is filtered by TISSUE and has 15 principal components. We can visualize the first two principal components:
@@ -957,7 +957,7 @@ print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
       warnings.warn(
 
 
-    0.21929317218703956
+    0.2185163269966173
 
 
 Evidently, the clustering with TISSUE-filtered principal components can provide some degree of separation between the two cell groups that we defined previously.
