@@ -89,25 +89,3 @@ def large_load(dirpath):
                 adata.uns[key] = df
             
     return(adata)
-    
-    
-# def nan_weighted_std(values, weights):
-    # """
-    # Return the weighted standard deviation (omitting nan values)
-    
-    # Parameters
-    # ----------
-        # values [array] - values for which to compute weighted standard deviation
-    
-        # weights [array] - weights for each of the values
-    
-    # Returns
-    # -------
-        # Weighted standard deviation of the values [float]
-    # """
-    # values_f = values[np.isfinite(values)]
-    # weights_f = weights[np.isfinite(values)]
-    # average = np.average(values_f, weights=weights_f)
-    # variance = np.average((values_f-average)**2, weights=weights_f)
-    
-    # return (np.sqrt(variance))
