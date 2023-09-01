@@ -3,15 +3,18 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "tissue"
+name = "tissue-sc"
 authors = [{name = "Eric Sun", email = "edsun97@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 dependencies = [
-	squidpy>=1.2.3
-]
+				"squidpy>=1.2.3"
+				]
 
 [project.urls]
 Home = "https://github.com/sunericd/tissue"
+
+[tool.flit.module]
+name = "tissue"
