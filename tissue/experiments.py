@@ -13,24 +13,43 @@ import gc
 
 #from tissue.utils import large_save, large_load
 from .utils import large_save, large_load
+from .main import load_spatial_data, conformalize_prediction_interval, get_spatial_uncertainty_scores_from_metadata
+from .downstream import multiple_imputation_testing
 
 
 def group_conformalize_from_intermediate(dataset_name, methods, symmetric, alpha_levels,
-                                         save_alpha=[0.05], savedir="SCPI"):
+                                         save_alpha=[0.05], savedir="SCPI", type_dataset="DataUpload"):
     '''
     Function for taking intermediate fold predictions and running group conformalization for all different alpha values
     
     Returns a results dictionary with calibration quality (res_dict) and the AnnData with CI for all folds at alpha of save_alpha [float]
-
+    
+    Parameters
+    ----------
+        dataset_name [str] - name of folder in DataUpload/
+        methods [list of str] - list of method keys to use for prediction_sets
+        symmetric [bool] - whether to use symmetric prediction intervals
+        alpha_levels [array] - alpha levels to calibrate over
+        save_alpha [list of float] - alphas to save prediction intervals into adata.obsm
+        savedir [str] - folder where the intermediate results are saved (independent folds)
+        type_dataset [str] - default to "DataUpload" but may have additional options in the future
+        
+    Returns
+    -------
+        res_dict [dict] - dictionary of calibration statistics / coverage statistics across the alpha levels
+        adata [AnnData] - anndata with calibration results added to metadata
     '''
     # read in spatial data
-    if os.path.isfile("DataUpload/"+dataset_name+"/Metadata.txt"):
-        adata = load_spatial_data("DataUpload/"+dataset_name+"/Spatial_count.txt",
-                                  "DataUpload/"+dataset_name+"/Locations.txt",
-                                   spatial_metadata = "DataUpload/"+dataset_name+"/Metadata.txt")
+    if type_dataset == "DataUpload":
+        if os.path.isfile("DataUpload/"+dataset_name+"/Metadata.txt"):
+            adata = load_spatial_data("DataUpload/"+dataset_name+"/Spatial_count.txt",
+                                      "DataUpload/"+dataset_name+"/Locations.txt",
+                                       spatial_metadata = "DataUpload/"+dataset_name+"/Metadata.txt")
+        else:
+            adata = load_spatial_data("DataUpload/"+dataset_name+"/Spatial_count.txt",
+                                      "DataUpload/"+dataset_name+"/Locations.txt")
     else:
-        adata = load_spatial_data("DataUpload/"+dataset_name+"/Spatial_count.txt",
-                                  "DataUpload/"+dataset_name+"/Locations.txt")
+        adata = sc.read_h5ad(os.path.join("additional_data",dataset_name,"spatial.h5ad"))
     adata.var_names = [x.lower() for x in adata.var_names]
     
     # results dict
@@ -115,7 +134,6 @@ def group_conformalize_from_intermediate(dataset_name, methods, symmetric, alpha
                 
             # Add new predictions
             for si, s_alpha in enumerate(save_alpha):
-                #sub_adatac = sub_adata.copy()
                 conformalize_prediction_interval (sub_adata, predicted, calib_genes, alpha_level=s_alpha,
                                                   symmetric=symmetric, return_scores_dict=False)
                 
@@ -150,13 +168,60 @@ def group_conformalize_from_intermediate(dataset_name, methods, symmetric, alpha
     return(res_dict, adata)
 
 
+def measure_calibration_error (res_dict, key, method="average"):
+    '''
+    Scores the calibration results from the res_dict object (dictionary output of group_conformalize_from_intermediate())
+    
+    Parameters
+    ----------
+        res_dict [python dict]
+        key [str] - key to access for scoring (i.e. the model name)
+        method [str] = "average" or "gene" to report either the results on average calibration or average metric across all genes
+        
+    Returns
+    -------
+        score [float] - score for calibration error (lower is better)
+    '''        
+    from sklearn.metrics import auc
+    
+    if method == "gene":    
+        auc_diffs = []
+            
+        for gene in res_dict[key]['ind_gene_results'].keys():
+            diff = np.abs(res_dict[key]['ind_gene_results'][gene]['test'] - res_dict[key]['ind_gene_results'][gene]['1-alpha'])            
+            auc_diffs.append(np.trapz(y=diff, x=res_dict[key]['ind_gene_results'][gene]['1-alpha']))
+                
+        score = np.nanmean(np.abs(auc_diffs))
+        
+    else:
+        diff = np.abs(res_dict[key]['test'] - res_dict[key]['1-alpha'])            
+        score = np.abs(np.trapz(y=diff, x=res_dict[key]['1-alpha']))
+    
+    return (score)
+
 
 def group_multiple_imputation_testing_from_intermediate(dataset_name, methods, symmetric, condition, n_imputations=100,
-                                                        group1=None, group2=None, savedir="SCPI"):
+                                                        group1=None, group2=None, savedir="SCPI", test="ttest"):
     '''
     Function for taking intermediate fold predictions and running multiple imputation t-tests
     
     Returns AnnData object with all test results saved in adata.var
+    
+    Parameters
+    ----------
+        dataset_name [str] - name of folder in DataUpload/
+        methods [list of str] - list of method keys to use for prediction_sets
+        symmetric [bool] - whether to use symmetric prediction intervals
+        condition [str] - key in adata.obs to use for testing
+        n_imputations [int] - number of multiple imputations
+        group1 [None or str] - value in condition to use for group1 (if None, then will get results for all unique values)
+        group2 [None or str] - value in condition to use for group2 (if None, then will use all other values as group2)
+        savedir [str] - folder where the intermediate results are saved (independent folds)
+        type_dataset [str] - default to "DataUpload" but may have additional options in the future
+        
+    Returns
+    -------
+        adata [AnnData] - anndata with testing results added to metadata
     ''' 
     # read in spatial data
     if os.path.isfile("DataUpload/"+dataset_name+"/Metadata.txt"):
@@ -193,7 +258,7 @@ def group_multiple_imputation_testing_from_intermediate(dataset_name, methods, s
 
             # run multiple imputation test
             keys_list = multiple_imputation_testing (sub_adata, predicted, calib_genes, condition, n_imputations=n_imputations,
-                                                     group1=group1, group2=group2, symmetric=symmetric, return_keys=True)
+                                                     group1=group1, group2=group2, symmetric=symmetric, return_keys=True, test=test)
             
             if i == 0:
                 for key in keys_list:
@@ -207,36 +272,3 @@ def group_multiple_imputation_testing_from_intermediate(dataset_name, methods, s
                 adata.obsm[predicted][fold] = sub_adata.obsm[predicted][fold].values.copy()
                 
     return(adata)
-    
-def leiden_clustering(adata, pca=True, inplace=False, **kwargs):
-    '''
-    Performs Leiden clustering using settings in the PBMC3K tutorial from Scanpy:
-    
-    https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html
-    
-    Adds under key "leiden" in adata.obs
-    '''
-    if inplace is False:
-        adata = adata.copy()
-    if pca is True:
-        adata.X[np.isnan(adata.X)] = 0
-        adata.X[adata.X < 0] = 0
-        sc.pp.normalize_total(adata, target_sum=1e4)
-        sc.pp.log1p(adata)
-        sc.tl.pca(adata, svd_solver='arpack')
-    else:
-        adata.obsm['X_pca'] = adata.X
-    sc.pp.neighbors(adata)#, n_neighbors=10, n_pcs=15)
-    sc.tl.leiden(adata, **kwargs)
-    
-    return (adata.obs['leiden'].copy(), adata.obsm['X_pca'].copy())
-    
-def pca_correlation(pcs1, pcs2):
-    '''
-    Computes Pearson correlation between concatenated/flattened pcs1 and pcs2
-    
-    Effectively equal to variance-weighted average of the column-wise correlations
-    '''
-    corr, p = pearsonr(pcs1.flatten(), pcs2.flatten())
-    
-    return(corr)

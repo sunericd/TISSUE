@@ -1,4 +1,4 @@
-# Contains main functions for computing spatial uncertainty, calibration scores, and prediction intervals with TISSUE
+# Contains main functions for core TISSUE pipeline: computing cell-centric variability and calibrated prediction intervals
 
 import numpy as np
 import pandas as pd
@@ -14,33 +14,37 @@ import warnings
 import os
 
 #from tissue.utils import nan_weighted_std
-from .utils import nan_weighted_std
+#from .utils import nan_weighted_std
 
 
 def load_paired_datasets (spatial_counts, spatial_loc, RNAseq_counts, spatial_metadata = None,
-                          min_cell_prevalence_spatial = 0.0, min_cell_prevalence_RNAseq = 0.0,
-                          min_gene_prevalence_spatial = 0.0, min_gene_prevalence_RNAseq = 0.01):
+                          min_cell_prevalence_spatial = 0.0, min_cell_prevalence_RNAseq = 0.01,
+                          min_gene_prevalence_spatial = 0.0, min_gene_prevalence_RNAseq = 0.0):
     '''
     Uses datasets in the format specified by Li et al. (2022)
         See: https://drive.google.com/drive/folders/1pHmE9cg_tMcouV1LFJFtbyBJNp7oQo9J
-        
+    
+    Parameters
+    ----------
         spatial_counts [str] - path to spatial counts file; rows are cells
         spatial_loc [str] - path to spatial locations file; rows are cells
         RNAseq_counts [str] - path to RNAseq counts file; rows are genes
         spatial_metadata [None or str] - if not None, then path to spatial metadata file (will be read into spatial_adata.obs)
         min_cell_prevalence_spatial [float between 0 and 1] - minimum prevalence among cells to include gene in spatial anndata object, default=0
-        min_cell_prevalence_RNAseq [float between 0 and 1] - minimum prevalence among cells to include gene in RNAseq anndata object, default=0
+        min_cell_prevalence_RNAseq [float between 0 and 1] - minimum prevalence among cells to include gene in RNAseq anndata object, default=0.01
         min_gene_prevalence_spatial [float between 0 and 1] - minimum prevalence among genes to include cell in spatial anndata object, default=0
-        min_gene_prevalence_RNAseq [float between 0 and 1] - minimum prevalence among genes to include cell in RNAseq anndata object, default=0.01
+        min_gene_prevalence_RNAseq [float between 0 and 1] - minimum prevalence among genes to include cell in RNAseq anndata object, default=0
     
-    Returns AnnData objects with counts and location (if applicable) in metadata
+    Returns
+    -------
+        spatial_adata, RNAseq_adata - AnnData objects with counts and location (if applicable) in metadata
     '''
     # Spatial data loading
     spatial_adata = load_spatial_data (spatial_counts,
-                                     spatial_loc,
-                                     spatial_metadata = spatial_metadata,
-                                     min_cell_prevalence_spatial = min_cell_prevalence_spatial,
-                                     min_gene_prevalence_spatial = min_gene_prevalence_spatial)
+                                       spatial_loc,
+                                       spatial_metadata = spatial_metadata,
+                                       min_cell_prevalence_spatial = min_cell_prevalence_spatial,
+                                       min_gene_prevalence_spatial = min_gene_prevalence_spatial)
     
     # RNAseq data loading
     RNAseq_adata = load_rnaseq_data (RNAseq_counts,
@@ -57,16 +61,19 @@ def load_spatial_data (spatial_counts, spatial_loc, spatial_metadata=None,
     
     See load_paired_datasets() for details on arguments
     '''
+    # read in spatial counts
     df = pd.read_csv(spatial_counts,header=0,sep="\t")
     
     # filter lowly expressed genes
     cells_prevalence = np.mean(df>0, axis=0)
     df = df.loc[:,cells_prevalence > min_cell_prevalence_spatial]
     del cells_prevalence
+    
     # filter sparse cells
     genes_prevalence = np.mean(df>0, axis=1)
-    df = df.loc[genes_prevalence > min_gene_prevalence_spatial, :]
+    df = df.loc[genes_prevalence > min_gene_prevalence_spatial,:]
     del genes_prevalence
+    
     # create AnnData
     spatial_adata = ad.AnnData(X=df, dtype='float64')
     spatial_adata.obs_names = df.index.values
@@ -76,7 +83,6 @@ def load_spatial_data (spatial_counts, spatial_loc, spatial_metadata=None,
     
     # add spatial locations
     locations = pd.read_csv(spatial_loc,header=0,delim_whitespace=True)
-    #locations.index = spatial_adata.obs_names
     spatial_adata.obsm["spatial"] = locations.values
     
     # add metadata
@@ -98,15 +104,19 @@ def load_rnaseq_data (RNAseq_counts, min_cell_prevalence_RNAseq = 0.0, min_gene_
     
     See load_paired_datasets() for details on arguments
     '''
+    # read in RNAseq counts
     df = pd.read_csv(RNAseq_counts,header=0,index_col=0,sep="\t")
-    # filter lowly expressed genes
-    cells_prevalence = np.mean(df>0, axis=0)
-    df = df.loc[:,cells_prevalence > min_cell_prevalence_RNAseq]
+    
+    # filter lowly expressed genes -- note that df is transposed gene x cell
+    cells_prevalence = np.mean(df>0, axis=1)
+    df = df.loc[cells_prevalence > min_cell_prevalence_RNAseq,:]
     del cells_prevalence
+    
     # filter sparse cells
-    genes_prevalence = np.mean(df>0, axis=1)
-    df = df.loc[genes_prevalence > min_gene_prevalence_RNAseq, :]
+    genes_prevalence = np.mean(df>0, axis=0)
+    df = df.loc[:,genes_prevalence > min_gene_prevalence_RNAseq]
     del genes_prevalence
+    
     # create AnnData
     RNAseq_adata = ad.AnnData(X=df.T, dtype='float64')
     RNAseq_adata.obs_names = df.T.index.values
@@ -127,23 +137,34 @@ def preprocess_data (adata, standardize=False, normalize=False):
         1. sc.pp.normalize_total() if normalize is True
         2. sc.pp.log1p() if normalize is True
         3. Not recommended: standardize each gene (subtract mean, divide by standard deviation)
-        
+    
+    Parameters
+    ----------
         standardize [Boolean] - whether to standardize genes; default is False
         normalize [Boolean] - whether to normalize data; default is False (based on finding by Li et al., 2022)
-        
-    NOTE: Under current default settings, this method does nothing to adata
+    
+    Returns
+    -------
+        Modifies adata in-place
+    
+    NOTE: Under current default settings for TISSUE, this method does nothing to adata
     '''
+    # normalize data
     if normalize is True:
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
     
+    # standardize data
     if standardize is True:
         adata.X = np.divide(adata.X - np.mean(adata.X, axis=0), np.std(adata.X, axis=0))
 
 
 def build_spatial_graph (adata, method="fixed_radius", spatial="spatial", radius=None, n_neighbors=20, set_diag=True):
     '''
-    Builds a spatial graph from AnnData according to specifications:
+    Builds a spatial graph from AnnData according to specifications. Uses Squidpy implementations for building spatial graphs.
+    
+    Parameters
+    ----------
         adata [AnnData] - spatial data, must include adata.obsm[spatial]
         method [str]:
             - "radius" (all cells within radius are neighbors)
@@ -156,59 +177,95 @@ def build_spatial_graph (adata, method="fixed_radius", spatial="spatial", radius
         n_neighbors [None or int] - number of neighbors to get for each cell (if method is "fixed" or "fixed_radius" or "radius_fixed"); defaults to 20
         set_diag [True or False] - whether to have diagonal of 1 in adjacency (before normalization); False is identical to theory and True is more robust; defaults to True
     
-    Performs all computations inplace. Uses SquidPy implementations for graphs.
+    Returns
+    -------
+        Modifies adata in-place
     '''
     # delaunay graph
     if method == "delaunay": # triangulation only
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic", set_diag=set_diag)
     
-    # radius-based methods
-    elif method == "radius": # radius only
-        if radius is None: # compute 90th percentile of delaunay triangulation
+    # neighborhoods determined by fixed radius
+    elif method == "radius":
+        if radius is None: # compute 90th percentile of delaunay triangulation as default radius
             sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
             if isinstance(adata.obsp["spatial_distances"],np.ndarray):
                 dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
             else:
                 dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
+        # build graph
         sq.gr.spatial_neighbors(adata, radius=radius, coord_type="generic", set_diag=set_diag)
     
+    # delaunay graph with removal of outlier edges with distance > radius
     elif method == "delaunay_radius":
+        # build initial graph
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic", set_diag=set_diag)
-        if radius is None:
+        if radius is None: # compute default radius as 75th percentile + 1.5*IQR
             if isinstance(adata.obsp["spatial_distances"],np.ndarray):
                 dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
             else:
                 dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
+        # prune edges by radius
         adata.obsp['spatial_connectivities'][adata.obsp['spatial_distances']>radius] = 0
         adata.obsp['spatial_distances'][adata.obsp['spatial_distances']>radius] = 0
     
+    # fixed neighborhood size with removal of outlier edges with distance > radius
     elif method == "fixed_radius":
+        # build initial graph
         sq.gr.spatial_neighbors(adata, n_neighs=n_neighbors, coord_type="generic", set_diag=set_diag)
-        if radius is None:
+        if radius is None: # compute default radius as 75th percentile + 1.5*IQR
             if isinstance(adata.obsp["spatial_distances"],np.ndarray):
                 dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
             else:
                 dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
+        # prune edges by radius
         adata.obsp['spatial_connectivities'][adata.obsp['spatial_distances']>radius] = 0
         adata.obsp['spatial_distances'][adata.obsp['spatial_distances']>radius] = 0
             
-    # fixed neighborhood size methods
+    # fixed neighborhood size
     elif method == "fixed":
         sq.gr.spatial_neighbors(adata, n_neighs=n_neighbors, coord_type="generic", set_diag=set_diag)
             
     else:
         raise Exception ("method not recognized")
-        
 
+
+def load_spatial_graph(adata, npz_filepath, add_identity=True):
+    '''
+    Reads in scipy sparse adjacency matrix from the specified npz_filepath and adds it to adata.obsp["spatial_connectivities"]
+    
+    Parameters
+    ----------
+        add_identity [bool] - whether to add a diagonal of 1's to ensure compatability with TISSUE (i.e. fully connected)
+    
+    Returns
+    -------
+        Modifies adata in-place
+    
+    If graph is weighted, then you should set weight="spatial_connectivities" in downstream TISSUE calls for cell-centric variability calculation
+    '''
+    from scipy import sparse
+    a = sparse.load_npz(npz_filepath)
+    
+    if add_identity is True:
+        a += sparse.identity(a.shape[0]) # add identity matrix
+
+    adata.obsp["spatial_connectivities"] = a
+    
+    print("If graph is weighted, then you should set weight='spatial_connectivities' in downstream call of conformalize_spatial_uncertainty()")
+    
 
 def predict_gene_expression (spatial_adata, RNAseq_adata,
                              target_genes, conf_genes=None,
                              method="spage", n_folds=None, random_seed=444, **kwargs):
     '''
     Leverages one of several methods to predict spatial gene expression from a paired spatial and scRNAseq dataset
+    
+    Parameters
+    ----------
         spatial_adata [AnnData] = spatial data
         RNAseq_adata [AnnData] = RNAseq data, RNAseq_adata.var_names should be superset of spatial_adata.var_names
         target_genes [list of str] = genes to predict spatial expression for; must be a subset of RNAseq_adata.var_names
@@ -221,8 +278,10 @@ def predict_gene_expression (spatial_adata, RNAseq_adata,
         n_folds [None or int] = number of cv folds to use for conf_genes, cannot exceed number of conf_genes, None is keeping each gene in its own fold
         random_seed [int] = used to see n_folds choice (defaults to 444)
     
-    Adds to adata the [numpy matrix]: spatial_adata.obsm["predicted_expression"], spatial_adata.obsm["combined_loo_expression"]
-        - matrix of predicted gene expressions (same number of rows as spatial_adata, columns are target_genes)
+    Returns
+    -------
+        Adds to adata the [numpy matrix]: spatial_adata.obsm["predicted_expression"], spatial_adata.obsm["combined_loo_expression"]
+            - matrix of predicted gene expressions (same number of rows as spatial_adata, columns are target_genes)
     '''
     # change all genes to lower
     target_genes = [t.lower() for t in target_genes]
@@ -239,10 +298,8 @@ def predict_gene_expression (spatial_adata, RNAseq_adata,
     if any(x in target_genes for x in spatial_adata.var_names):
         warnings.warn("Some target_genes are already measured in the spatial_adata object!")
     
-    # first pass over all genes
-    if method == "onn":
-        predicted_expression_target = knn_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,n_neighbors=1,**kwargs)
-    elif method == "knn":
+    # First pass over all genes using specified method
+    if method == "knn":
         predicted_expression_target = knn_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,**kwargs)
     elif method == "spage":
         predicted_expression_target = spage_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,**kwargs)
@@ -250,13 +307,11 @@ def predict_gene_expression (spatial_adata, RNAseq_adata,
         predicted_expression_target = gimvi_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,**kwargs)
     elif method == "tangram":
         predicted_expression_target = tangram_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,**kwargs)
-    elif method == "stplus":
-        predicted_expression_target = stplus_impute(spatial_adata,RNAseq_adata,genes_to_predict=target_genes,**kwargs)
     else:
         raise Exception ("method not recognized")
         
-    # second pass over conf_genes
-        # predictions done with a leave-gene-out approach
+    # Second pass over conf_genes using specified method using cross-validation
+    
     if conf_genes is None:
         conf_genes = list(spatial_adata.var_names)
     conf_genes = [c.lower() for c in conf_genes]
@@ -283,10 +338,9 @@ def predict_gene_expression (spatial_adata, RNAseq_adata,
     np.random.shuffle(conf_genes)
     folds = np.array_split(conf_genes, n_folds)
     
+    # run prediction on each fold
     for gi, fold in enumerate(folds):
-        if method == "onn":
-            loo_expression = knn_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,n_neighbors=1,**kwargs)
-        elif method == "knn":
+        if method == "knn":
             loo_expression = knn_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,**kwargs)
         elif method == "spage":
             loo_expression = spage_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,**kwargs)
@@ -294,8 +348,6 @@ def predict_gene_expression (spatial_adata, RNAseq_adata,
             loo_expression = gimvi_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,**kwargs)
         elif method == "tangram":
             loo_expression = tangram_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,**kwargs)
-        elif method == "stplus":
-            loo_expression = stplus_impute(spatial_adata[:,~spatial_adata.var_names.isin(fold)],RNAseq_adata,genes_to_predict=list(fold)+target_genes,**kwargs)
         else:
             raise Exception ("method not recognized")
     
@@ -337,7 +389,7 @@ def knn_impute (spatial_adata, RNAseq_adata, genes_to_predict, n_neighbors, **kw
     intersection = np.intersect1d(spatial_adata.var_names, RNAseq_adata.var_names)
     subRNA = RNAseq_adata[:, intersection]
     subspatial = spatial_adata[:, intersection]
-    joint_adata = ad.AnnData(X=np.vstack((subRNA.X,subspatial.X)))
+    joint_adata = ad.AnnData(X=np.vstack((subRNA.X,subspatial.X)), dtype='float32')
     joint_adata.obs_names = np.concatenate((subRNA.obs_names.values,subspatial.obs_names.values))
     joint_adata.var_names = subspatial.var_names.values
     joint_adata.obs["batch"] = ["rna"]*len(subRNA.obs_names.values)+["spatial"]*len(spatial_adata.obs_names.values)
@@ -368,7 +420,8 @@ def spage_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     
     See predict_gene_expression() for details on arguments
     '''
-    from tissue.SpaGE.main import SpaGE
+    #from tissue.SpaGE.main import SpaGE
+    from .SpaGE.main import SpaGE
     
     # transform adata in spage input data format
     if isinstance(spatial_adata.X,np.ndarray):
@@ -381,6 +434,7 @@ def spage_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     else:
         RNAseq_data = pd.DataFrame(RNAseq_adata.X.T.toarray())
     RNAseq_data.index = RNAseq_adata.var_names.values
+    
     # predict with SpaGE
     predicted_expression = SpaGE(spatial_data.T,RNAseq_data.T,genes_to_predict=genes_to_predict,**kwargs)
     
@@ -415,26 +469,68 @@ def tangram_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     predicted_expression = pd.DataFrame(ad_ge[:,genes_to_predict].X, index=ad_ge[:,genes_to_predict].obs_names, columns=ad_ge[:,genes_to_predict].var_names)
     
     return(predicted_expression)
+
+
+def gimvi_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
+    '''
+    Run gimVI gene imputation
     
+    See predict_gene_expression() for details on arguments
+    '''
+    import scvi
+    from scvi.external import GIMVI
+    
+    # preprocessing of data
+    spatial_adata = spatial_adata[:, spatial_adata.var_names.isin(RNAseq_adata.var_names)]
+    predict_idxs = [list(RNAseq_adata.var_names).index(gene) for gene in genes_to_predict]
+    spatial_dim0 = spatial_adata.shape[0]
+    
+    # indices for filtering out zero-expression cells
+    filtered_cells_spatial = (spatial_adata.X.sum(axis=1) > 1)
+    filtered_cells_RNAseq = (RNAseq_adata.X.sum(axis=1) > 1)
+    
+    # make copies of subsets
+    spatial_adata = spatial_adata[filtered_cells_spatial,:].copy()
+    RNAseq_adata = RNAseq_adata[filtered_cells_RNAseq,:].copy()
+    
+    # setup anndata for scvi
+    GIMVI.setup_anndata(spatial_adata)
+    GIMVI.setup_anndata(RNAseq_adata)
+    
+    # train gimVI model
+    model = GIMVI(RNAseq_adata, spatial_adata, **kwargs)
+    model.train(200)
+    
+    # apply trained model for imputation
+    _, imputation = model.get_imputed_values(normalized=False)
+    imputed = imputation[:, predict_idxs]
+    predicted_expression = np.zeros((spatial_dim0, imputed.shape[1]))
+    predicted_expression[filtered_cells_spatial,:] = imputed
+    predicted_expression = pd.DataFrame(predicted_expression, columns=genes_to_predict)
+    
+    return(predicted_expression)
+
     
 def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uniform', mean_normalized=False, add_one=True,
-                                      grouping_method=None, k=4, k2=None, n_pc=None, n_pc2=None):
+                                      grouping_method=None, k='auto', k2='auto', n_pc=None, n_pc2=None):
     '''
-    Builds scores from spatial uncertainties in predicted transcript expression using get_spatial_uncertainty_scores()
-    Calibrates scores and computes conformal prediction intervals.
+    Generates cell-centric variability and then performs stratified grouping and conformal score calculation
     
-    Inputs:
+    Parameters
+    ----------
         adata - AnnData object with adata.obsm[predicted] and adata.obsp['spatial_connectivites']
         predicted [str] - string corresponding to key in adata.obsm that contains the predicted transcript expression
         calib_genes [list or np.1darray] - strings corresponding to the genes to use in calibration
         weight [str] - weights to use when computing spatial variability (either 'exp_cos' or 'uniform'; default is 'uniform')
         mean_normalized [bool] - whether the standard deviation will be mean-normalized (i.e. coefficient of variation)
         add_one [bool] - whether to add an intercept term of one to the spatial standard deviation
-        For grouping_method [str], k [int>0], k2 [None or int>0], n_pc [None or int>0], n_pc2 [None or int>0]; refer to get_grouping()
-        
-    Saves the uncertainty in adata.obsm[predicted+"_uncertainty"]
-    Saves the scores in adata.obsm[predicted+"_score"]
-    Saves an upper and lower bound in adata.obsm[predicted+"_lo"/"_hi"]
+        For grouping_method [str], k [int>0 or 'auto'], k2 [None or int>0 or 'auto'], n_pc [None or int>0], n_pc2 [None or int>0]; refer to get_grouping()
+    
+    Returns
+    -------
+        Saves the uncertainty in adata.obsm[predicted+"_uncertainty"]
+        Saves the scores in adata.obsm[predicted+"_score"]
+        Saves an upper and lower bound in adata.obsm[predicted+"_lo"/"_hi"]
     '''
     # get spatial uncertainty and add to annotations
     scores, residuals, G_stdev, G = get_spatial_uncertainty_scores(adata, predicted, calib_genes,
@@ -456,29 +552,37 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
     if grouping_method is None:
         groups = np.zeros(G.shape)
     else:
-        groups = get_grouping(G, method=grouping_method, k=k, k2=k2, n_pc=n_pc, n_pc2=n_pc2)
+        groups, k_final, k2_final = get_grouping(G, method=grouping_method, k=k, k2=k2, n_pc=n_pc, n_pc2=n_pc2)
+    
+    # add grouping and k-values to anndata
     adata.obsm[predicted+"_groups"] = groups
+    adata.uns[predicted+"_kg"] = k_final
+    adata.uns[predicted+"_kc"] = k2_final
     
     
 def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='uniform', mean_normalized=False,
                                     add_one=True):
     '''
-    Builds scores from spatial uncertainties in predicted transcript expression.
+    Computes spatial uncertainty scores (i.e. cell-centric variability)
     
-    Inputs:
+    Parameters
+    ----------
         adata - AnnData object with adata.obsm[predicted] and adata.obsp['spatial_connectivites']
         predicted [str] - string corresponding to key in adata.obsm that contains the predicted transcript expression
         calib_genes [list or np.1darray] - strings corresponding to the genes to use in calibration
-        weight [str] - weights to use when computing spatial variability (either 'exp_cos' or 'uniform'; default is 'uniform')
+        weight [str] - weights to use when computing spatial variability (either 'exp_cos', 'uniform', or 'spatial_connectivities')
+                     - 'spatial_connectivities' will use values in adata.obsp['spatial_connectivities']
         mean_normalized [bool] - whether the standard deviation will be mean-normalized (i.e. coefficient of variation)
         add_one [bool] - whether to add one to the uncertainty
         
-    Returns:
+    Returns
+    -------
         scores - spatial uncertainty scores for all calib_genes
+        residuals - prediction errors matching scores dimensions
         G_stdev - spatial standard deviations measured; same shape as adata.obsm[predicted]
         G - adata.obsm[predicted].values
     '''
-    if weight not in ["uniform", "exp_cos"]:
+    if weight not in ["uniform", "exp_cos", "spatial_connectivities"]:
         raise Exception('weight not recognized')
     
     if 'spatial_connectivities' not in adata.obsp.keys():
@@ -495,13 +599,17 @@ def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='unifo
     G_stdev = np.zeros_like(G)
     
     # compute weights
-    if weight == "exp_cos":
+    if weight == "exp_cos": # use TISSUE cosine similarity weighting
         from sklearn.metrics.pairwise import cosine_similarity
         cos_weights = cosine_similarity(G)
         weights = np.exp(cos_weights)
+    elif weight == "spatial_connectivities": # use preset weights
+        weights = A.copy()
+        weights[np.isnan(weights)] = 0
+        A[A>0] = 1
     else:
         weights = np.ones(A.shape)
-
+    
     for j in range(G.shape[1]):
         # multiply to get neighbors (row-wise element-wise multiplication)
         nA = A*G[:,j]
@@ -522,7 +630,7 @@ def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='unifo
         
         # update G_stdev with uncertainties
         G_stdev[:,j] = nA_std
-        
+    
     # compute scores based on confidence genes (prediction residuals)
     calib_idxs = [np.where(adata.obsm[predicted].columns==gene)[0][0] for gene in calib_genes]
     residuals = adata[:, calib_genes].X - adata.obsm[predicted][calib_genes].values # Y-G
@@ -536,11 +644,17 @@ def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='unifo
 
 def cell_centered_variability (values, weights, c_idx):
     '''
-    Takes in an array an nA and weights to compute cell-centered variability:
-            
+    Takes in an array and weights to compute cell-centric variability:
+    
+    Parameters
+    ----------
         values [1d arr] - array with cell's masked neighborhood expression (non-neighbors are nan)
         weights [1d arr] - same dim as values; contains weights for computing CCV_c
         c_idx [int] - index for which element of nA corresponds to center cell
+        
+    Returns
+    -------
+        ccv [float] - cell-centric varaiblity
     '''
     values_f = values[np.isfinite(values)]
     weights_f = weights[np.isfinite(values)]
@@ -557,8 +671,17 @@ def get_spatial_uncertainty_scores_from_metadata(adata, predicted):
     in the AnnData (adata) object. Note, these must have been computed and saved in the same was as in
     conformalize_spatial_uncertainty().
     
+    Parameters
+    ----------
         adata [AnnData] - object that has saved results in obsm
         predicted [str] - key for predictions in obsm
+        
+    Returns
+    -------
+        scores - array of calibration scores [cell x gene]
+        residuals - prediction error [cell x gene]
+        G_stdev - array of cell-centric variability measures [cell x gene]
+        groups - array of indices for group assignment [cell x gene]
     '''
     scores = np.array(adata.obsm[predicted+"_score"]).copy()
     residuals = np.array(adata.obsm[predicted+"_error"]).copy()
@@ -569,11 +692,13 @@ def get_spatial_uncertainty_scores_from_metadata(adata, predicted):
     return(scores, residuals, G_stdev, G, groups)
 
 
-def get_grouping(G, method, k=1, k2=None, min_samples=5, n_pc=None, n_pc2=None):
+def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2=None):
     '''
     Given the predicted gene expression matrix G (rows=cells, cols=genes),
     creates a grouping of the different genes (or cells) determined by:
     
+    Parameters
+    ----------
         G [numpy matrix/array] - predicted gene expression; columns are genes
         method [str] - 'cv_exp' to separate by quantiles of CV in gene expression
                        'kmeans_gene' to separate genes by k-means clustering
@@ -587,10 +712,14 @@ def get_grouping(G, method, k=1, k2=None, min_samples=5, n_pc=None, n_pc2=None):
         n_pc and npc2 [None or int] - number of PCs to use before KMeans clustering
                            - NOTE: It is recommended to do this for methods: "kmeans_gene" and "kmeans_gene_cell"
         
-    Returns:
+    Returns
+    -------
         groups [numpy array] - same dimension as G with values corresponding to group number (integer)
     '''
-    if k <= 1: # just one group
+    # for auto k searches
+    k_list = [2,3,4]
+    
+    if k == 1: # just one group
         groups = np.zeros(G.shape)
     else:
         if method == "cv_exp":
@@ -601,34 +730,50 @@ def get_grouping(G, method, k=1, k2=None, min_samples=5, n_pc=None, n_pc2=None):
                 groups[g] = gi
             groups = np.tile(groups, (G.shape[0], 1)) # expand so each row is the same
         
+        # grouping by genes only
         elif method == "kmeans_gene":
             X = StandardScaler().fit_transform(G.T)
             if n_pc is not None:
                 X = PCA(n_components=n_pc).fit_transform(X)
+            # if "auto", then select best k (k_gene)
+            if k == 'auto':
+                k = get_best_k(X, k_list)
             kmeans = KMeans(n_clusters=k, random_state=444).fit(X)
             groups = kmeans.labels_
             groups = np.tile(groups, (G.shape[0], 1)) # expand so each row is the same
-            
+        
+        # grouping by cells only
         elif method == "kmeans_cell":
             X = StandardScaler().fit_transform(G)
             if n_pc is not None:
                 X = PCA(n_components=n_pc).fit_transform(X)
+            # if "auto", then select best k2 (k_cell)
+            if k == 'auto':
+                k = get_best_k(X, k_list)
             kmeans = KMeans(n_clusters=k, random_state=444).fit(X)
             groups = kmeans.labels_
             groups = np.tile(groups, (G.shape[1], 1)).T # expand so each col is the same
             
+        # grouping by genes then by cells
         elif method == "kmeans_gene_cell":
             # gene grouping
             X = StandardScaler().fit_transform(G.T)
             if n_pc is not None:
                 X = PCA(n_components=n_pc).fit_transform(X)
+            # if "auto", then select best k (k_gene)
+            if k == 'auto':
+                k = get_best_k(X, k_list)
             kmeans_genes = KMeans(n_clusters=k, random_state=444).fit(X)
             cluster_genes = kmeans_genes.labels_
-            
             groups = np.ones(G.shape)*np.nan # init groups array
-            counter = 0 # to index new groupsn with integers
-            
-            # within each gene group, group cells
+            counter = 0 # to index new groups with integers
+            # if "auto", then select best k2 (k_cell)
+            if k2 == 'auto':
+                X = StandardScaler().fit_transform(G)
+                if n_pc is not None:
+                    X = PCA(n_components=n_pc2).fit_transform(X)
+                k2 = get_best_k(X, k_list)
+            # within each gene group, group cells        
             for cg in np.unique(cluster_genes):
                 G_group = G[:, cluster_genes==cg]
                 X_group = StandardScaler().fit_transform(G_group)
@@ -643,13 +788,52 @@ def get_grouping(G, method, k=1, k2=None, min_samples=5, n_pc=None, n_pc2=None):
         else:
             raise Exception("method for get_grouping() is not recognized")
     
-    return(groups)
+    return(groups, k, k2)
+
+
+def get_best_k (X, k_list):
+    '''
+    Given a matrix X to perform KMeans clustering and list of k parameter values,
+    searches for the best k value
+    
+    k_list should be in ascending order since get_best_k will terminate once the
+    silhouette score decreases
+    
+    Parameters
+    ----------
+        X - array to perform K-means clustering on
+        k_list - list of positive integers for number of clusters to use
+        
+    Returns
+    -------
+        best_k [int] - k value that returns the highest silhouette score
+    '''
+    from sklearn.metrics import silhouette_score
+    
+    # init search
+    current_best = -np.inf
+    best_k = 1
+    
+    # search along k_list
+    for k in k_list:
+        kmeans = KMeans(n_clusters=k, random_state=444).fit(X)
+        score = silhouette_score(X, kmeans.labels_)
+        if score > current_best: # update if score increases
+            current_best = score
+            best_k = k
+        else: # stop if score decreases
+            break
+            
+    return(best_k)
 
 
 
-def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level=0.33, symmetric=True, return_scores_dict=False):
+def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level=0.33, symmetric=True, return_scores_dict=False, compute_wasserstein=False):
     '''
     Builds conformal prediction interval sets for the predicted gene expression
+    
+    Parameters
+    ----------
         adata [AnnData] - contains adata.obsm[predicted] corresponding to the predicted gene expression
         predicted [str] - key in adata.obsm that corresponds to predicted gene expression 
         calib_genes [list or arr of str] - names of the genes in adata.var_names that are used in the calibration set
@@ -657,6 +841,13 @@ def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level
                               default value is alpha_level = 0.33 corresponding to 67% CI
         symmetric [bool] - whether to report symmetric prediction intervals or non-symmetric intervals; default is True (symmetric)
         return_scores_dict [bool] - whether to return the scores dictionary
+        compute_wasserstein [bool] - whether to compute the Wasserstein distance of the score distributions between each subgroup and its calibration set
+                                   - added to adata.obsm["{predicted}_wasserstein"]
+                                   
+    Returns
+    -------
+        Modifies adata in-place
+        Optionally returns the scores_flattened_dict (dictionary containing calibration scores and group assignments)
     '''
     # get uncertainties and scores from saved adata
     scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
@@ -668,11 +859,17 @@ def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level
     ### Building prediction intervals
 
     prediction_sets = (np.zeros(G.shape), np.zeros(G.shape)) # init prediction sets
+    
+    if compute_wasserstein is True: # set up matrix to store Wasserstein distances
+        from scipy.stats import wasserstein_distance
+        score_dist_wasserstein = np.ones(G.shape).astype(G.dtype)*np.nan
 
     # conformalize independently within groups of genes
     for group in np.unique(groups[~np.isnan(groups)]):
+        
+        # for symmetric intervals
         if symmetric is True:
-            scores_flattened = scores_flattened_dict[str(group)]
+            scores_flattened = scores_flattened_dict[str(group)] # flatten scores
             n = len(scores_flattened)
             if (n < 100): # if less than 100 samples in either set, then use the full group set
                 scores_flattened = scores_flattened_dict[str(np.nan)]
@@ -681,13 +878,16 @@ def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level
                 qhat = np.nanquantile(scores_flattened, np.ceil((n+1)*(1-alpha_level))/n)
             except:
                 qhat = np.nan
-            prediction_sets[0][groups==group] = (G-G_stdev*qhat)[groups==group]
-            prediction_sets[1][groups==group] = (G+G_stdev*qhat)[groups==group]
+            prediction_sets[0][groups==group] = (G-G_stdev*qhat)[groups==group] # lower bound
+            prediction_sets[1][groups==group] = (G+G_stdev*qhat)[groups==group] # upper bound
+        
+        # for asymmetric intervals (Default)
         else:
             scores_lo_flattened = scores_flattened_dict[str(group)][0]
             scores_hi_flattened = scores_flattened_dict[str(group)][1]
             n_lo = len(scores_lo_flattened)-np.isnan(scores_lo_flattened).sum()
             n_hi = len(scores_hi_flattened)-np.isnan(scores_hi_flattened).sum()
+            # compute qhat for lower and upper bounds
             if (n_lo < 100) or (n_hi < 100): # if less than 100 samples in either set, then use the full group set
                 scores_lo_flattened = scores_flattened_dict[str(np.nan)][0]
                 scores_hi_flattened = scores_flattened_dict[str(np.nan)][1]
@@ -699,8 +899,31 @@ def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level
             except:
                 qhat_lo = np.nan
                 qhat_hi = np.nan
-            prediction_sets[0][groups==group] = (G-G_stdev*qhat_lo)[groups==group]
-            prediction_sets[1][groups==group] = (G+G_stdev*qhat_hi)[groups==group]
+            # compute bounds of prediction interval
+            prediction_sets[0][groups==group] = (G-G_stdev*qhat_lo)[groups==group] # lower bound
+            prediction_sets[1][groups==group] = (G+G_stdev*qhat_hi)[groups==group] # upper bound
+            
+        # Wasserstein distances
+        if compute_wasserstein is True:
+            # set up mask for calibration genes
+            calib_idxs = [np.where(adata.obsm[predicted].columns==gene)[0][0] for gene in calib_genes]
+            calib_mask = np.full(G_stdev.shape, False)
+            calib_mask[:,calib_idxs] = True
+            # get CCV measures
+            v = G_stdev[(groups==group)&~(calib_mask)].flatten() # group CCV
+            if len(v) > 0: # skip if no observations in group
+                if symmetric is True:
+                    if n < 100:
+                        u = G_stdev[calib_mask].flatten() # calibration CCV
+                    else:
+                        u = G_stdev[(groups==group)&(calib_mask)].flatten() # calibration CCV
+                else:
+                    if (n_lo < 100) or (n_hi < 100):
+                        u = G_stdev[calib_mask].flatten() # calibration CCV
+                    else:
+                        u = G_stdev[(groups==group)&(calib_mask)].flatten() # calibration CCV
+                # calculate wasserstein distance for the CCV distributions
+                score_dist_wasserstein[groups==group] = wasserstein_distance(u, v).astype(G.dtype)
             
     # add prediction intervals to adata
     adata.uns['alpha'] = alpha_level
@@ -710,7 +933,13 @@ def conformalize_prediction_interval (adata, predicted, calib_genes, alpha_level
     adata.obsm[predicted+"_hi"] = pd.DataFrame(prediction_sets[1],
                                                columns=adata.obsm[predicted].columns,
                                                index=adata.obsm[predicted].index)
-            
+    # add wasserstein distances to adata        
+    if compute_wasserstein is True:
+        adata.obsm[predicted+"_wasserstein"] = pd.DataFrame(score_dist_wasserstein,
+                                               columns=adata.obsm[predicted].columns,
+                                               index=adata.obsm[predicted].index)
+    
+    
     if return_scores_dict is True:
     
         return(scores_flattened_dict)
@@ -721,12 +950,19 @@ def build_calibration_scores (adata, predicted, calib_genes, symmetric=False, in
                               trim_quantiles=[None,None]):
     '''
     Builds calibration score sets
+    
+    Parameters
+    ----------
         adata [AnnData] - contains adata.obsm[predicted] corresponding to the predicted gene expression
         predicted [str] - key in adata.obsm with predicted gene expression values
         calib_genes [list or arr of str] - names of the genes in adata.var_names that are used in the calibration set
         symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
         include_zero_scores [bool] - whether to exclude zero scores
         trim_quantiles [list of len 2; None or float between 0 and 1] - specifies what quantile range of scores to trim to; None implies no bounds
+        
+    Returns
+    -------
+        scores_flattened_dict - dictionary containing the calibration scores for each stratified group
     '''
     
     # get uncertainties and scores from saved adata

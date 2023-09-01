@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 from sklearn.neighbors import NearestNeighbors
-from tissue.SpaGE.principal_vectors import PVComputation
+#from tissue.SpaGE.principal_vectors import PVComputation
+from .principal_vectors import PVComputation
 
 def SpaGE(Spatial_data,RNA_data,n_pv,genes_to_predict=None):
     """

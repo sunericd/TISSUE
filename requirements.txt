@@ -1,3 +1,6 @@
 squidpy==1.2.3
-wpca==0.1
+#wpca==0.1
 #tangram-sc==1.0.3
+#harmonypy==0.0.6
+#scvi-tools==0.19.0
+#spatialde==1.1.3
