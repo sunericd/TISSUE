@@ -644,11 +644,6 @@ adata.obs['condition'] = ['A' if i < round(adata.shape[0]/2) else 'B' for i in r
 sc.pl.embedding(adata, 'spatial', color='condition')
 ```
 
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/scanpy/plotting/_tools/scatterplots.py:392: UserWarning: No data for colormapping provided via 'c'. Parameters 'cmap' will be ignored
-      cax = scatter(
-
-
-
     
 ![png](README_files/README_29_1.png)
     
