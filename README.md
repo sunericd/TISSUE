@@ -96,17 +96,6 @@ adata, RNAseq_adata = tissue.main.load_paired_datasets("tests/data/Spatial_count
                                                        "tests/data/scRNA_count.txt")
 ```
 
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/anndata/_core/anndata.py:117: ImplicitModificationWarning: Transforming to str index.
-      warnings.warn("Transforming to str index.", ImplicitModificationWarning)
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/anndata/_core/anndata.py:856: UserWarning: 
-    AnnData expects .obs.index to contain strings, but got values like:
-        [0, 1, 2, 3, 4]
-    
-        Inferred to be: integer
-    
-      names = self._prep_dim_index(names, "obs")
-
-
 Now we can impute any genes of interest that are found in the scRNAseq dataset but not in the spatial dataset. In this case, we will hold out a target gene from the spatial data and apply an imputation method to predict its expression using the scRNAseq dataset.
 
 First, we preprocess the data and make sure that the gene names are matchable across the two datasets:
@@ -234,17 +223,6 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
                                              grouping_method="kmeans_gene_cell", k=4, k2=2)
 ```
 
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
-
 
 Finally, we can calibrate the spatial uncertainty measures to get calibration scores and then use those to extract prediction intervals for any confidence level $1-\alpha$. This is done with `tissue.main.conformalize_prediction_interval()`
 
@@ -283,19 +261,6 @@ adata.obsm['spage_predicted_expression_wasserstein']
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -780,19 +745,7 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -952,9 +905,6 @@ clusters = kmeans.labels_
 from sklearn.metrics import adjusted_rand_score
 print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
 ```
-
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
-      warnings.warn(
 
 
     0.2185163269966173
