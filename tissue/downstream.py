@@ -15,7 +15,7 @@ from .main import build_calibration_scores, get_spatial_uncertainty_scores_from_
 
 
 def multiple_imputation_testing (adata, predicted, calib_genes, condition, test="ttest", n_imputations=100,
-                                 group1=None, group2=None, symmetric=False, return_keys=False):
+                                 group1=None, group2=None, symmetric=False, return_keys=False, save_mi=False):
     '''
     Uses multiple imputation with the score distributions to perform hypothesis testing
     
@@ -37,6 +37,7 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, test=
         n_imputations [int] - number of imputations to use
         symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
         return_keys [bool] - whether to return the keys for which to access the results from adata
+        save_mi [False or str] - multiple imputation saving (only used for multiple_imputation_ttest())
         
     Returns
     -------
@@ -49,7 +50,7 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, test=
     #####################################################################
     if test == "ttest":
         keys = multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imputations=n_imputations,
-                                 group1=group1, group2=group2, symmetric=symmetric)
+                                 group1=group1, group2=group2, symmetric=symmetric, save_mi=save_mi)
             
     #####################################################################
     # One-sample ("less"/"greater") Wilcoxon test  
@@ -294,11 +295,15 @@ def multiply_imputed_pvalue (pvalues, method="licht_rubin"):
 
 
 def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imputations=100,
-                               group1=None, group2=None, symmetric=False):
+                               group1=None, group2=None, symmetric=False, save_mi=False):
     '''
     Runs TISSUE multiple imputation two-sample t-test using Rubin's rules
     
     See multiple_imputation_testing() for details on parameters
+    
+    Additional Parameters
+    ---------------------
+        save_mi [False or str] - if not False, then saves "multiple_imputations.npy" stacked matrix of imputed gene expression at save_mi path
     '''
 
     # get uncertainties and scores from saved adata
@@ -319,10 +324,14 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
     # cast condition to str
     condition = str(condition)
     
+    new_G_list = [] # for saving multiple imputations
+    
     for m in range(n_imputations):
         
         # generate new imputation
         new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
+        if save_mi is not False:
+            new_G_list.append(new_G)
     
         # calculate statistics for the imputation using approach from Palmer & Peer, 2016
         
@@ -383,8 +392,185 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
             adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(pooled_results_dict[key_measure][key_comparison][None,:],
                                                                                                  columns=adata.obsm[predicted].columns)
             keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
-            
+    
+    # save multiple imputations
+    if save_mi is not False:
+        # stack all imputations and save
+        stacked_mi = np.dstack(new_G_list)
+        np.save(os.path.join(save_mi,f"{predicted}.npy"), stacked_mi)
+    
     return(keys_list)
+
+
+def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_genes, condition, n_imputations=100,
+                                 group1=None, group2=None, symmetric=False, return_keys=False, load_mi=False):
+    '''
+    Uses multiple imputation with the score distributions to perform hypothesis testing on gene signatures
+    
+    Parameters
+    ----------
+        sig_dirpath [str] - path to the directory containing the gene signatures organized as:
+                            sig_dirpath/
+                                {name of signature 1}/
+                                {name of signature N}/
+                                    genes.txt - text file with each row being a gene name
+                                    coefficients.txt - optional text file with each row being a float weight for corresponding gene
+        adata [AnnData] - contains adata.obsm[predicted] corresponding to the predicted gene expression
+        predicted [str] - key in adata.obsm that corresponds to predicted gene expression
+        calib_genes [list or arr of str] - names of the genes in adata.var_names that are used in the calibration set
+        condition [str] - key in adata.obs for which to compute the hypothesis test
+            group1 [value] - value in adata.obs[condition] identifying the first comparison group
+                             if None, will perform group vs all comparisons for all unique values in adata.obs[condition]
+            group2 [value] - value in adata.obs[condition] identifying the second comparison group
+                             if None, will compare against all values that are not group1
+        n_imputations [int] - number of imputations to use
+        symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
+        return_keys [bool] - whether to return the keys for which to access the results from adata
+        load_mi [bool] - whether to save "{predicted}.npy" stacked matrix of all multiple imputations at sig_dirpath 
+        
+    Returns
+    -------
+        Modifies adata in-place to add the statistics and test results to metadata
+        Optionally returns the keys to access the results from adata
+        
+    '''
+    #####################################################################
+    # T-test (default) - this is the only option currently for signatures
+    #####################################################################
+    
+    if load_mi is False:
+        # get uncertainties and scores from saved adata
+        scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
+        
+        ### Building calibration sets for scores
+        
+        scores_flattened_dict = build_calibration_scores(adata, predicted, calib_genes, symmetric=symmetric,
+                                                         include_zero_scores=True, trim_quantiles=[None, 0.8]) # trim top 20% scores
+    else: # load in saved multiple imputations
+        mi_path = os.path.join(sig_dirpath,f"{predicted}.npy") # path to saved multiple imputations
+        mi_stacked = np.load(mi_path)
+    
+    ### Multiple imputation
+
+    # init dictionary to hold results (for independent two-sample t-test)
+    stat_dict = {}
+    stat_dict["mean_difference"] = {}
+    stat_dict["standard_deviation"] = {}
+    
+    # cast condition to str
+    condition = str(condition)
+    
+    for m in range(n_imputations):
+        
+        # generate new imputation
+        if load_mi is False:
+            new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
+        else:
+            new_G = mi_stacked[:,:,m].copy() # take the m-th multiple imputation
+        
+        # compute all signatures
+        imputed_sigs = [] 
+        sig_names = []
+        
+        for sigdir in next(os.walk(sig_dirpath))[1]: # iterate all top-level signature directories
+            # read in genes
+            with open(os.path.join(sig_dirpath,sigdir,"genes.txt")) as f:
+                signature_genes = [line.rstrip() for line in f]
+            signature_genes = np.array([x.lower() for x in signature_genes])
+            # load coefficients (if any)
+            if os.path.isfile(os.path.join(sig_dirpath,sigdir,"coefficients.txt")):
+                signature_coefficients = np.loadtxt(os.path.join(sig_dirpath,sigdir,"coefficients.txt"))
+            else:
+                signature_coefficients = np.ones(len(signature_genes))
+            # subset into shared genes
+            shared_gene_idxs = [ii for ii in range(len(signature_genes)) if signature_genes[ii] in adata.obsm[predicted].columns]
+            signature_genes = signature_genes[shared_gene_idxs]
+            signature_coefficients = signature_coefficients[shared_gene_idxs]
+            # if non-empty signature, then compute
+            if len(signature_genes) > 0:
+                # compute signature
+                subset_new_G = pd.DataFrame(new_G, columns = adata.obsm[predicted].columns)[signature_genes].values
+                sig_value = np.nansum(subset_new_G*signature_coefficients, axis=1)
+                # append signature value and name
+                imputed_sigs.append(sig_value)
+                sig_names.append(sigdir)
+
+        # construct gene signature matrix
+        imputed_sigs = np.vstack(imputed_sigs).T
+        
+        # keep running average of imputed gene signatures
+        if m == 0:
+            mean_imputed_sigs = imputed_sigs * 1/n_imputations
+        else:
+            mean_imputed_sigs += imputed_sigs * 1/n_imputations
+        
+        # calculate statistics for the imputation using approach from Palmer & Peer, 2016
+        
+        if group1 is None: # pairwise comparisons against all
+            
+            for g1 in np.unique(adata.obs[condition]):
+                
+                key = str(g1)+"_all"
+            
+                if m == 0: # init list
+                    stat_dict["mean_difference"][key] = []
+                    stat_dict["standard_deviation"][key] = []
+                
+                g1_bool = (adata.obs[condition] == g1) # g1
+                g2_bool = (adata.obs[condition] != g1) # all other
+                
+                mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
+                stat_dict["mean_difference"][key].append(mean_diff)
+                stat_dict["standard_deviation"][key].append(pooled_sd)
+                
+        elif group2 is None: # group1 vs all
+        
+            key = str(group1)+"_all"
+            
+            if m == 0: # init list
+                stat_dict["mean_difference"][key] = []
+                stat_dict["standard_deviation"][key] = []
+            
+            g1_bool = (adata.obs[condition] == group1) # g1
+            g2_bool = (adata.obs[condition] != group1) # all other
+            
+            mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
+            stat_dict["mean_difference"][key].append(mean_diff)
+            stat_dict["standard_deviation"][key].append(pooled_sd)
+            
+        else: # group1 vs group2
+            
+            key = str(group1)+"_"+str(group2)
+            
+            if m == 0: # init list
+                stat_dict["mean_difference"][key] = []
+                stat_dict["standard_deviation"][key] = []
+            
+            g1_bool = (adata.obs[condition] == group1) # g1
+            g2_bool = (adata.obs[condition] == group2) # g2
+            
+            mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
+            stat_dict["mean_difference"][key].append(mean_diff)
+            stat_dict["standard_deviation"][key].append(pooled_sd)
+
+    # pool statistics and perform t-test
+    pooled_results_dict = pool_multiple_stats(stat_dict)
+     
+    # add stats to adata
+    keys_list = []
+    for key_measure in pooled_results_dict.keys():
+        for key_comparison in pooled_results_dict[key_measure].keys():
+            adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(pooled_results_dict[key_measure][key_comparison][None,:],
+                                                                                                 columns=sig_names)
+            keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
+                    
+    # add gene sigs to adata
+    adata.obsm[predicted+"_gene_signatures"] = pd.DataFrame(mean_imputed_sigs, columns=sig_names, index=adata.obs_names)
+    
+    if return_keys is True:
+        
+        return(keys_list)
+
 
 
 def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=False):

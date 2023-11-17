@@ -65,14 +65,12 @@ def load_spatial_data (spatial_counts, spatial_loc, spatial_metadata=None,
     df = pd.read_csv(spatial_counts,header=0,sep="\t")
     
     # filter lowly expressed genes
-    cells_prevalence = np.mean(df>0, axis=0)
+    cells_prevalence = np.mean(df.values>0, axis=0)
     df = df.loc[:,cells_prevalence > min_cell_prevalence_spatial]
-    del cells_prevalence
     
     # filter sparse cells
-    genes_prevalence = np.mean(df>0, axis=1)
+    genes_prevalence = np.mean(df.values>0, axis=1)
     df = df.loc[genes_prevalence > min_gene_prevalence_spatial,:]
-    del genes_prevalence
     
     # create AnnData
     spatial_adata = ad.AnnData(X=df, dtype='float64')
@@ -83,13 +81,17 @@ def load_spatial_data (spatial_counts, spatial_loc, spatial_metadata=None,
     
     # add spatial locations
     locations = pd.read_csv(spatial_loc,header=0,delim_whitespace=True)
-    spatial_adata.obsm["spatial"] = locations.values
+    spatial_adata.obsm["spatial"] = locations.loc[genes_prevalence > min_gene_prevalence_spatial, :].values
     
     # add metadata
     if spatial_metadata is not None:
         metadata_df = pd.read_csv(spatial_metadata)
+        metadata_df = metadata_df.loc[genes_prevalence > min_gene_prevalence_spatial, :]
         metadata_df.index = spatial_adata.obs_names
         spatial_adata.obs = metadata_df
+    
+    # remove genes with nan values
+    spatial_adata = spatial_adata[:,np.isnan(spatial_adata.X).sum(axis=0)==0].copy()
     
     # make unique obs_names and var_names
     spatial_adata.obs_names_make_unique()
@@ -122,6 +124,9 @@ def load_rnaseq_data (RNAseq_counts, min_cell_prevalence_RNAseq = 0.0, min_gene_
     RNAseq_adata.obs_names = df.T.index.values
     RNAseq_adata.var_names = df.T.columns
     del df
+    
+    # remove genes with nan values
+    RNAseq_adata = RNAseq_adata[:,np.isnan(RNAseq_adata.X).sum(axis=0)==0].copy()
     
     # make unique obs_names and var_names
     RNAseq_adata.obs_names_make_unique()
@@ -481,7 +486,7 @@ def gimvi_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     from scvi.external import GIMVI
     
     # preprocessing of data
-    spatial_adata = spatial_adata[:, spatial_adata.var_names.isin(RNAseq_adata.var_names)]
+    spatial_adata = spatial_adata[:, spatial_adata.var_names.isin(RNAseq_adata.var_names)].copy()
     predict_idxs = [list(RNAseq_adata.var_names).index(gene) for gene in genes_to_predict]
     spatial_dim0 = spatial_adata.shape[0]
     
@@ -498,7 +503,7 @@ def gimvi_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     GIMVI.setup_anndata(RNAseq_adata)
     
     # train gimVI model
-    model = GIMVI(RNAseq_adata, spatial_adata, **kwargs)
+    model = GIMVI(RNAseq_adata, spatial_adata, generative_distributions=['nb', 'nb'], **kwargs) # 'nb' tends to be less buggy
     model.train(200)
     
     # apply trained model for imputation

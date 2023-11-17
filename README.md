@@ -966,5 +966,5 @@ For Jupyter notebooks and Python scripts associated with our original publicatio
 
 If you find this code useful, we would appreciate it if you cite the following publications:
 
-**Sun, E. D., Ma, R. & Zou, J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. 2023.04.25.538326
+**Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses.
 Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).**
