@@ -96,6 +96,17 @@ adata, RNAseq_adata = tissue.main.load_paired_datasets("tests/data/Spatial_count
                                                        "tests/data/scRNA_count.txt")
 ```
 
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/anndata/_core/anndata.py:117: ImplicitModificationWarning: Transforming to str index.
+      warnings.warn("Transforming to str index.", ImplicitModificationWarning)
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/anndata/_core/anndata.py:856: UserWarning: 
+    AnnData expects .obs.index to contain strings, but got values like:
+        [0, 1, 2, 3, 4]
+    
+        Inferred to be: integer
+    
+      names = self._prep_dim_index(names, "obs")
+
+
 Now we can impute any genes of interest that are found in the scRNAseq dataset but not in the spatial dataset. In this case, we will hold out a target gene from the spatial data and apply an imputation method to predict its expression using the scRNAseq dataset.
 
 First, we preprocess the data and make sure that the gene names are matchable across the two datasets:
@@ -223,6 +234,17 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
                                              grouping_method="kmeans_gene_cell", k=4, k2=2)
 ```
 
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
+
 
 Finally, we can calibrate the spatial uncertainty measures to get calibration scores and then use those to extract prediction intervals for any confidence level $1-\alpha$. This is done with `tissue.main.conformalize_prediction_interval()`
 
@@ -261,6 +283,19 @@ adata.obsm['spage_predicted_expression_wasserstein']
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -291,123 +326,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
   <tbody>
     <tr>
       <th>0</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
+      <td>0.256212</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.270633</td>
+      <td>0.256212</td>
     </tr>
     <tr>
       <th>...</th>
@@ -435,123 +470,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
     </tr>
     <tr>
       <th>3400</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>3401</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>3402</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>3403</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
     <tr>
       <th>3404</th>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
+      <td>0.164583</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.167865</td>
+      <td>0.164583</td>
     </tr>
   </tbody>
 </table>
@@ -644,6 +679,11 @@ adata.obs['condition'] = ['A' if i < round(adata.shape[0]/2) else 'B' for i in r
 sc.pl.embedding(adata, 'spatial', color='condition')
 ```
 
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/scanpy/plotting/_tools/scatterplots.py:392: UserWarning: No data for colormapping provided via 'c'. Parameters 'cmap' will be ignored
+      cax = scatter(
+
+
+
     
 ![png](README_files/README_29_1.png)
     
@@ -674,8 +714,8 @@ print("t-statistic = "+str(round(adata.uns['spage_A_B_tstat'][target_gene].value
 print("P = "+str(round(adata.uns['spage_A_B_pvalue'][target_gene].values[0],5)))
 ```
 
-    t-statistic = -2.73153
-    P = 0.00877
+    t-statistic = -2.46568
+    P = 0.01735
 
 
 Testing of our target gene (Plp1) results in significant under-expression in group A as compared to group B, suggesting that Plp1 could be a marker gene for the cell types / regions in group B.
@@ -724,7 +764,7 @@ print(adata_filtered.shape)
     (3405, 31)
     
     After TISSUE cell filtering:
-    (2875, 31)
+    (2870, 31)
 
 
 And similarly, we can check the balance in the two cell groups after filtering:
@@ -740,7 +780,19 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -758,7 +810,7 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
     <tr>
       <th>Number of Cells</th>
       <td>1255</td>
-      <td>1620</td>
+      <td>1615</td>
     </tr>
   </tbody>
 </table>
@@ -816,8 +868,8 @@ print(f"Accuracy Score: {accuracy_score(test_labels, pred_test)}")
 print(f"ROC-AUC Score: {roc_auc_score(test_labels_num, pred_test_scores[:,1])}")
 ```
 
-    Accuracy Score: 0.782608695652174
-    ROC-AUC Score: 0.861074481074481
+    Accuracy Score: 0.7926829268292683
+    ROC-AUC Score: 0.864171974522293
 
 
 The model performs quite well! It has high accuracy and high ROC-AUC for a relatively balanced binary classification problem. A similar approach can be taken to leverage TISSUE uncertainties in training/evaluating other model architectures (e.g. linear regression, random forest, neural nets).
@@ -856,7 +908,7 @@ PC_reduced = adata.uns['spage_predicted_expression_PC15_filtered_'].copy()
 print(PC_reduced.shape)
 ```
 
-    (2875, 15)
+    (2870, 15)
 
 
 We now have a reduced representation of our original data that is filtered by TISSUE and has 15 principal components. We can visualize the first two principal components:
@@ -901,8 +953,11 @@ from sklearn.metrics import adjusted_rand_score
 print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
 ```
 
+    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
+      warnings.warn(
 
-    0.2185163269966173
+
+    0.22030332212082546
 
 
 Evidently, the clustering with TISSUE-filtered principal components can provide some degree of separation between the two cell groups that we defined previously.
@@ -960,11 +1015,37 @@ At various parts of the TISSUE pipeline, the user can select different hyperpara
 - `k`, `k2` in `tissue.main.conformalize_spatial_uncertainty()` - these are the gene and cell stratified group numbers respectively. You can try different values for each of these, but we recommend staying below 4 for either parameter. In the manuscript, we primarily used `k=4` and `k2=1`. If you don't want to choose, TISSUE can automatically select these hyperparameters if you set `k='auto'` and `k2='auto'`.
 
 
+## Additional consideration: Runtime
+
+If you are experiencing slow runtimes with TISSUE, there are several things to check or change for faster runtime (also refer to Extended Data Figure 9 in our publication for runtime breakdown in the first version of TISSUE for different-sized datasets):
+
+
+**Large number of cells**
+- We have tested TISSUE on datasets up to 20K cells. If your data contains substantially more cells, we recommend downsampling the cells (e.g. random uniform sampling) or subsetting to cell groups of interest.
+- If the prediction step takes a long time, we suggest decreasing the number of cross-validation folds by setting `n_folds` in `tissue.main.predict_gene_expression()`.
+
+**Large number of genes**
+- Generally TISSUE is robust to the number of genes but for further speedup, we recommend only predicting genes that are necessary or using the scRNAseq reference dataset to identify a set of highly variable genes for prediction beforehand (if whole-transcriptome is desired, for example using `scanpy.pp.highly_variable_genes`).
+- Set `weight='exp_cos'` and `weight_npc` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` to perform cosine similarity weights based on low-dimensionality (for better runtime and reduce high-dimensional distortions)
+- Set `n_pc` and `n_pc2` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` so that k-means clustering will be done on lower dimensional space (for better runtime and performance)
+
+## UNDER DEVELOPMENT:
+- Multi-threading for making cross-validation predictions in `tissue.main.predict_gene_expression()`.
+- Sparse operations to speed up `tissue.main.conformalize_spatial_uncertainty()`.
+
+
+
+
+
 ## Citation
 
 For Jupyter notebooks and Python scripts associated with our original publication, please refer to https://github.com/sunericd/tissue-figures-and-analyses.git.
 
 If you find this code useful, we would appreciate it if you cite the following publications:
 
-**Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses.
-Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).**
+**Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).**
+
+
+```python
+
+```
