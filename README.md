@@ -234,9 +234,6 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
                                              grouping_method="kmeans_gene_cell", k=4, k2=2)
 ```
 
-    Cell-centric variability computed in 2.9729208946228027 seconds
-
-
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
       warnings.warn(
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
@@ -247,9 +244,6 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
       warnings.warn(
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
       warnings.warn(
-
-
-    Stratified grouping computed in 5.794720649719238 seconds
 
 
 Finally, we can calibrate the spatial uncertainty measures to get calibration scores and then use those to extract prediction intervals for any confidence level $1-\alpha$. This is done with `tissue.main.conformalize_prediction_interval()`
@@ -277,329 +271,7 @@ adata
 
 
 
-Here we turned on the Wasserstein distance metric, which returns a measure indicating the distance between the cell-centric variability values of the predicted genes and the values of their support (i.e. calibration group) in the original data. The lower this value, the better supported the predicted group:
-
-
-```python
-# show Wasserstein distances
-adata.obsm['spage_predicted_expression_wasserstein']
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>plp1</th>
-      <th>aldoc</th>
-      <th>bmp4</th>
-      <th>cnr1</th>
-      <th>pdgfra</th>
-      <th>hexb</th>
-      <th>sox10</th>
-      <th>cpne5</th>
-      <th>mrc1</th>
-      <th>syt6</th>
-      <th>...</th>
-      <th>kcnip2</th>
-      <th>serpinf1</th>
-      <th>gfap</th>
-      <th>crh</th>
-      <th>pthlh</th>
-      <th>vtn</th>
-      <th>crhbp</th>
-      <th>slc32a1</th>
-      <th>lamp5</th>
-      <th>apln</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>0.259435</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.259435</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>3400</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>3401</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>3402</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>3403</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-    <tr>
-      <th>3404</th>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>0.165032</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>0.165032</td>
-    </tr>
-  </tbody>
-</table>
-<p>3405 rows × 32 columns</p>
-</div>
-
-
+Here we turned on the Wasserstein distance metric, which returns a measure indicating the distance between the cell-centric variability values of the predicted genes and the values of their support (i.e. calibration group) in the original data. The lower this value, the better supported the predicted group.
 
 Now let's visualize what these prediction intervals look like for the target (unseen) gene and how it compares to the actual prediction errors.
 
@@ -650,7 +322,7 @@ plt.show()
 
 
     
-![png](README_files/README_25_0.png)
+![png](README_files/README_24_0.png)
     
 
 
@@ -691,7 +363,7 @@ sc.pl.embedding(adata, 'spatial', color='condition')
 
 
     
-![png](README_files/README_29_1.png)
+![png](README_files/README_28_1.png)
     
 
 
@@ -720,8 +392,8 @@ print("t-statistic = "+str(round(adata.uns['spage_A_B_tstat'][target_gene].value
 print("P = "+str(round(adata.uns['spage_A_B_pvalue'][target_gene].values[0],5)))
 ```
 
-    t-statistic = -1.7752
-    P = 0.08816
+    t-statistic = -2.29955
+    P = 0.03283
 
 
 Testing of our target gene (Plp1) results in significant under-expression in group A as compared to group B, suggesting that Plp1 could be a marker gene for the cell types / regions in group B.
@@ -770,7 +442,7 @@ print(adata_filtered.shape)
     (3405, 31)
     
     After TISSUE cell filtering:
-    (2869, 31)
+    (2870, 31)
 
 
 And similarly, we can check the balance in the two cell groups after filtering:
@@ -815,8 +487,8 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
     </tr>
     <tr>
       <th>Number of Cells</th>
-      <td>1254</td>
-      <td>1615</td>
+      <td>1252</td>
+      <td>1618</td>
     </tr>
   </tbody>
 </table>
@@ -874,8 +546,8 @@ print(f"Accuracy Score: {accuracy_score(test_labels, pred_test)}")
 print(f"ROC-AUC Score: {roc_auc_score(test_labels_num, pred_test_scores[:,1])}")
 ```
 
-    Accuracy Score: 0.8101045296167247
-    ROC-AUC Score: 0.8704985301322883
+    Accuracy Score: 0.7961672473867596
+    ROC-AUC Score: 0.8631798138167566
 
 
 The model performs quite well! It has high accuracy and high ROC-AUC for a relatively balanced binary classification problem. A similar approach can be taken to leverage TISSUE uncertainties in training/evaluating other model architectures (e.g. linear regression, random forest, neural nets).
@@ -914,7 +586,7 @@ PC_reduced = adata.uns['spage_predicted_expression_PC15_filtered_'].copy()
 print(PC_reduced.shape)
 ```
 
-    (2869, 15)
+    (2870, 15)
 
 
 We now have a reduced representation of our original data that is filtered by TISSUE and has 15 principal components. We can visualize the first two principal components:
@@ -938,7 +610,7 @@ plt.show()
 
 
     
-![png](README_files/README_55_0.png)
+![png](README_files/README_54_0.png)
     
 
 
@@ -963,7 +635,7 @@ print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
       warnings.warn(
 
 
-    0.21945847171154445
+    0.21763240085325367
 
 
 Evidently, the clustering with TISSUE-filtered principal components can provide some degree of separation between the two cell groups that we defined previously.
@@ -1004,7 +676,7 @@ plt.show()
 
 
     
-![png](README_files/README_63_0.png)
+![png](README_files/README_62_0.png)
     
 
 
@@ -1034,7 +706,7 @@ If you are experiencing slow runtimes with TISSUE, there are several things to c
 
 **Large number of genes**
 - Generally TISSUE is robust to the number of genes but for further speedup, we recommend only predicting genes that are necessary or using the scRNAseq reference dataset to identify a set of highly variable genes for prediction beforehand (if whole-transcriptome is desired, for example using `scanpy.pp.highly_variable_genes`).
-- Set `weight='exp_cos'` and `weight_npc` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` to perform cosine similarity weights based on low-dimensionality (for better runtime and reduce high-dimensional distortions)
+- Set `weight='exp_cos_pca'` and `weight_n_pc` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` to perform cosine similarity weights based on low-dimensionality (for better runtime and reduce high-dimensional distortions)
 - Set `n_pc` and `n_pc2` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` so that k-means clustering will be done on lower dimensional space (for better runtime and performance)
 
 **Other runtime tips**:
@@ -1058,21 +730,11 @@ We have optimized TISSUE to be memory-efficient with respect the size of the ori
 
 # UNDER DEVELOPMENT:
 - Multi-threading for making cross-validation predictions in `tissue.main.predict_gene_expression()`.
-- Sparse operations to speed up `tissue.main.conformalize_spatial_uncertainty()` (in particular sparse calculations in `tissue.main.get_spatial_uncertainty_scores()`).
 
+# Citation
 
-
-
-
-## Citation
-
-For Jupyter notebooks and Python scripts associated with our original publication, please refer to https://github.com/sunericd/tissue-figures-and-analyses.git.
+For Jupyter notebooks and Python scripts associated with our original publication, please refer to https://github.com/sunericd/tissue-figures-and-analyses.git. **NOTE: For the original publication, we used TISSUE version 0.0.2**
 
 If you find this code useful, we would appreciate it if you cite the following publications:
 
 **Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).**
-
-
-```python
-
-```
