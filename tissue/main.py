@@ -13,9 +13,6 @@ import anndata as ad
 import warnings
 import os
 
-#from tissue.utils import nan_weighted_std
-#from .utils import nan_weighted_std
-
 
 def load_paired_datasets (spatial_counts, spatial_loc, RNAseq_counts, spatial_metadata = None,
                           min_cell_prevalence_spatial = 0.0, min_cell_prevalence_RNAseq = 0.01,
@@ -519,8 +516,8 @@ def gimvi_impute (spatial_adata, RNAseq_adata, genes_to_predict, **kwargs):
     return(predicted_expression)
 
     
-def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uniform', mean_normalized=False, add_one=True,
-                                      grouping_method=None, k='auto', k2='auto', n_pc=None, n_pc2=None):
+def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='exp_cos', add_one=True,
+                                      grouping_method=None, k='auto', k2='auto', n_pc=None, n_pc2=None, weight_n_pc=10):
     '''
     Generates cell-centric variability and then performs stratified grouping and conformal score calculation
     
@@ -529,9 +526,9 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
         adata - AnnData object with adata.obsm[predicted] and adata.obsp['spatial_connectivites']
         predicted [str] - string corresponding to key in adata.obsm that contains the predicted transcript expression
         calib_genes [list or np.1darray] - strings corresponding to the genes to use in calibration
-        weight [str] - weights to use when computing spatial variability (either 'exp_cos' or 'uniform'; default is 'uniform')
-        mean_normalized [bool] - whether the standard deviation will be mean-normalized (i.e. coefficient of variation)
+        weight [str] - weights to use when computing spatial variability (either 'exp_cos' or 'spatial_connectivities')
         add_one [bool] - whether to add an intercept term of one to the spatial standard deviation
+        weight_n_pc [None or int] - if not None, then specifies number of top principal components to use for weight calculation if weight is 'exp_cos' (default is None)
         For grouping_method [str], k [int>0 or 'auto'], k2 [None or int>0 or 'auto'], n_pc [None or int>0], n_pc2 [None or int>0]; refer to get_grouping()
     
     Returns
@@ -541,13 +538,10 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
         Saves an upper and lower bound in adata.obsm[predicted+"_lo"/"_hi"]
     '''
     # get spatial uncertainty and add to annotations
-    import time
-    start = time.time()
     scores, residuals, G_stdev, G = get_spatial_uncertainty_scores(adata, predicted, calib_genes,
                                                                    weight=weight,
-                                                                   mean_normalized=mean_normalized,
-                                                                   add_one=add_one)
-    print(f"Cell-centric variability computed in {time.time()-start} seconds")
+                                                                   add_one=add_one,
+                                                                   weight_n_pc=weight_n_pc)
     
     adata.obsm[predicted+"_uncertainty"] = pd.DataFrame(G_stdev,
                                                         columns=adata.obsm[predicted].columns,
@@ -560,21 +554,19 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
                                                   index=adata.obsm[predicted].index)                                              
         
     # define group
-    start = time.time()
     if grouping_method is None:
         groups = np.zeros(G.shape)
     else:
         groups, k_final, k2_final = get_grouping(G, method=grouping_method, k=k, k2=k2, n_pc=n_pc, n_pc2=n_pc2)
-    print(f"Stratified grouping computed in {time.time()-start} seconds")
     
     # add grouping and k-values to anndata
     adata.obsm[predicted+"_groups"] = groups
     adata.uns[predicted+"_kg"] = k_final
     adata.uns[predicted+"_kc"] = k2_final
     
-    
-def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='uniform', mean_normalized=False,
-                                    add_one=True):
+
+def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='exp_cos',
+                                    add_one=True, weight_n_pc=None):
     '''
     Computes spatial uncertainty scores (i.e. cell-centric variability)
     
@@ -583,10 +575,10 @@ def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='unifo
         adata - AnnData object with adata.obsm[predicted] and adata.obsp['spatial_connectivites']
         predicted [str] - string corresponding to key in adata.obsm that contains the predicted transcript expression
         calib_genes [list or np.1darray] - strings corresponding to the genes to use in calibration
-        weight [str] - weights to use when computing spatial variability (either 'exp_cos', 'uniform', or 'spatial_connectivities')
+        weight [str] - weights to use when computing spatial variability (either 'exp_cos' or 'spatial_connectivities')
                      - 'spatial_connectivities' will use values in adata.obsp['spatial_connectivities']
-        mean_normalized [bool] - whether the standard deviation will be mean-normalized (i.e. coefficient of variation)
         add_one [bool] - whether to add one to the uncertainty
+        weight_n_pc [None or int] - if not None, then specifies number of top principal components to use for weight calculation if weight is 'exp_cos' (default is None)
         
     Returns
     -------
@@ -595,54 +587,65 @@ def get_spatial_uncertainty_scores (adata, predicted, calib_genes, weight='unifo
         G_stdev - spatial standard deviations measured; same shape as adata.obsm[predicted]
         G - adata.obsm[predicted].values
     '''
-    if weight not in ["uniform", "exp_cos", "spatial_connectivities"]:
+    if weight not in ["exp_cos", "spatial_connectivities"]:
         raise Exception('weight not recognized')
     
     if 'spatial_connectivities' not in adata.obsp.keys():
         raise Exception ("'spatial_connectivities' not found in adata.obsp and is required")
-        
-    # compute standard deviations
-    if isinstance(adata.obsp["spatial_connectivities"],np.ndarray):
-        A = adata.obsp["spatial_connectivities"].copy() # has 1 on diagonals
-    else:
-        A = adata.obsp["spatial_connectivities"].toarray().copy()
     
-    A[A == 0] = np.nan # convert zero to nan
+    # init prediction array and uncertainties array
+    A = adata.obsp['spatial_connectivities']
+    A.eliminate_zeros()
     G = adata.obsm[predicted].values.copy()
     G_stdev = np.zeros_like(G)
     
-    # compute weights
-    if weight == "exp_cos": # use TISSUE cosine similarity weighting
+    # init for exp_cos weighting
+    if weight == "exp_cos":
         from sklearn.metrics.pairwise import cosine_similarity
-        cos_weights = cosine_similarity(G)
-        weights = np.exp(cos_weights)
-    elif weight == "spatial_connectivities": # use preset weights
-        weights = A.copy()
-        weights[np.isnan(weights)] = 0
-        A[A>0] = 1
-    else:
-        weights = np.ones(A.shape)
+        if weight_n_pc is not None: # perform PCA first and then compute cosine weights from PCs
+            G_pca = StandardScaler().fit_transform(G)
+            G_pca = PCA(n_components=weight_n_pc, random_state=444).fit_transform(G_pca)
     
-    for j in range(G.shape[1]):
-        # multiply to get neighbors (row-wise element-wise multiplication)
-        nA = A*G[:,j]
+    # compute cell-centric variability
+    for i in range(G.shape[0]): # iterate cells
         
-        # compute variability
+        # get its neighbors only
+        cell_idxs = np.nonzero(A[i,:])[1]
+        c_idx = np.where(cell_idxs==i)[0][0] # center idx in subsetted array
+        
+        # compute weights for cell neighbors
+        if weight == "exp_cos": # use TISSUE cosine similarity weighting
+            if weight_n_pc is not None: # perform PCA first and then compute cosine weights from PCs
+                cos_weights = cosine_similarity(G_pca[i,:].reshape(1,-1), G_pca[cell_idxs,:])
+            else: # compute cosine weights from gene expression
+                cos_weights = cosine_similarity(G[i,:].reshape(1,-1), G[cell_idxs,:])
+            weights = np.exp(cos_weights).flatten()
+        
+        elif weight == "spatial_connectivities": # use preset weights
+            weights = A[i,cell_idxs].toarray().flatten()
+            weights[np.isnan(weights)] = 0
+        
+        else: # set uniform weights
+            weights = np.ones(len(cell_idxs))
+        
+        # compute CCV for each gene
         nA_std = []
-        for i in range(nA.shape[0]):
-            nA_std.append(cell_centered_variability(nA[i,:], weights=weights[i,:], c_idx=i))
-        nA_std = np.array(nA_std)
+        for j in range(G.shape[1]): # iterate genes
+            
+            # get expression of gene for cell and neighbors
+            expression_vec = G[cell_idxs,j]
+            
+            # compute CCV for cell
+            nA_std.append(cell_centered_variability(expression_vec, weights=weights, c_idx=c_idx))
         
-        # mean normalization if specified
-        if mean_normalized is True: # coefficient of variation (SD/mu) -- masked for SD > 0
-            nA_std[nA_std>0] = nA_std[nA_std>0] / np.nanmean(nA, axis=1)[nA_std>0]
+        nA_std = np.array(nA_std)
         
         # add one if specified
         if add_one is True:
             nA_std += 1
         
         # update G_stdev with uncertainties
-        G_stdev[:,j] = nA_std
+        G_stdev[i,:] = nA_std
     
     # compute scores based on confidence genes (prediction residuals)
     calib_idxs = [np.where(adata.obsm[predicted].columns==gene)[0][0] for gene in calib_genes]
@@ -735,7 +738,7 @@ def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2
         ### Gene grouping
         X = StandardScaler().fit_transform(G.T)
         if n_pc is not None:
-            X = PCA(n_components=n_pc).fit_transform(X)
+            X = PCA(n_components=n_pc, random_state=444).fit_transform(X)
         # if "auto", then select best k (k_gene)
         if k == 'auto':
             k = get_best_k(X, k_list)
@@ -755,7 +758,7 @@ def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2
         if k2 == 'auto':
             X = StandardScaler().fit_transform(G)
             if n_pc2 is not None:
-                X = PCA(n_components=n_pc2).fit_transform(X)
+                X = PCA(n_components=n_pc2, random_state=444).fit_transform(X)
             k2 = get_best_k(X, k_list)
         # within each gene group, group cells        
         for cg in np.unique(cluster_genes):
@@ -763,7 +766,7 @@ def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2
                 G_group = G[:, cluster_genes==cg]
                 X_group = StandardScaler().fit_transform(G_group)
                 if n_pc2 is not None:
-                    X_group = PCA(n_components=n_pc2).fit_transform(X_group)
+                    X_group = PCA(n_components=n_pc2, random_state=444).fit_transform(X_group)
                 kmeans_cells = KMeans(n_clusters=k2, random_state=444).fit(X_group)
                 cluster_cells = kmeans_cells.labels_
             else: # set same labels for all cells
