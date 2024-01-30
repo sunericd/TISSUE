@@ -194,10 +194,11 @@ def build_spatial_graph (adata, method="fixed_radius", spatial="spatial", radius
     elif method == "radius":
         if radius is None: # compute 90th percentile of delaunay triangulation as default radius
             sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
-            if isinstance(adata.obsp["spatial_distances"],np.ndarray):
-                dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
-            else:
-                dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
+            if isinstance(adata.obsp["spatial_distances"],np.ndarray): # numpy array
+                dists = adata.obsp['spatial_distances'][np.nonzero(adata.obsp['spatial_distances'])] # get nonzero array
+            else: # sparse matrix
+                adata.obsp['spatial_distances'].eliminate_zeros() # remove hard-set zeros
+                dists = adata.obsp['spatial_distances'].data # get non-zero values in sparse matrix
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
         # build graph
         sq.gr.spatial_neighbors(adata, radius=radius, coord_type="generic", set_diag=set_diag)
@@ -207,10 +208,11 @@ def build_spatial_graph (adata, method="fixed_radius", spatial="spatial", radius
         # build initial graph
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic", set_diag=set_diag)
         if radius is None: # compute default radius as 75th percentile + 1.5*IQR
-            if isinstance(adata.obsp["spatial_distances"],np.ndarray):
-                dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
-            else:
-                dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
+            if isinstance(adata.obsp["spatial_distances"],np.ndarray): # numpy array
+                dists = adata.obsp['spatial_distances'][np.nonzero(adata.obsp['spatial_distances'])] # get nonzero array
+            else: # sparse matrix
+                adata.obsp['spatial_distances'].eliminate_zeros() # remove hard-set zeros
+                dists = adata.obsp['spatial_distances'].data # get non-zero values in sparse matrix
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
         # prune edges by radius
         adata.obsp['spatial_connectivities'][adata.obsp['spatial_distances']>radius] = 0
@@ -221,10 +223,11 @@ def build_spatial_graph (adata, method="fixed_radius", spatial="spatial", radius
         # build initial graph
         sq.gr.spatial_neighbors(adata, n_neighs=n_neighbors, coord_type="generic", set_diag=set_diag)
         if radius is None: # compute default radius as 75th percentile + 1.5*IQR
-            if isinstance(adata.obsp["spatial_distances"],np.ndarray):
-                dists = adata.obsp['spatial_distances'].flatten()[adata.obsp['spatial_distances'].flatten() > 0]
-            else:
-                dists = adata.obsp['spatial_distances'].toarray().flatten()[adata.obsp['spatial_distances'].toarray().flatten() > 0]
+            if isinstance(adata.obsp["spatial_distances"],np.ndarray): # numpy array
+                dists = adata.obsp['spatial_distances'][np.nonzero(adata.obsp['spatial_distances'])] # get nonzero array
+            else: # sparse matrix
+                adata.obsp['spatial_distances'].eliminate_zeros() # remove hard-set zeros
+                dists = adata.obsp['spatial_distances'].data # get non-zero values in sparse matrix
             radius = np.percentile(dists, 75) + 1.5*(np.percentile(dists, 75) - np.percentile(dists, 25))
         # prune edges by radius
         adata.obsp['spatial_connectivities'][adata.obsp['spatial_distances']>radius] = 0
@@ -705,10 +708,7 @@ def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2
     Parameters
     ----------
         G [numpy matrix/array] - predicted gene expression; columns are genes
-        method [str] - 'cv_exp' to separate by quantiles of CV in gene expression
-                       'kmeans_gene' to separate genes by k-means clustering
-                       'kmeans_cell' to separate cells by k-means clustering
-                       'kmeans_gene_cell' to separate by genes and the by cells by k-means clustering
+        method [str] - 'kmeans_gene_cell' to separate by genes and the by cells by k-means clustering
         k [int] - number of groups; only for cv_exp, kmeans_gene, kmeans_cell and kmeans_gene_cell
                   if <=1 then defaults to one group including all values
         k2 [int] - second number of groups for kmeans_gene_cell
@@ -723,75 +723,53 @@ def get_grouping(G, method, k='auto', k2='auto', min_samples=5, n_pc=None, n_pc2
     '''
     # for auto k searches
     k_list = [2,3,4]
-    
-    if k == 1: # just one group
-        groups = np.zeros(G.shape)
-    else:
-        if method == "cv_exp":
-            cv_exp = np.nanstd(G, axis=0)/np.nanmean(G, axis=0)
-            grouping = np.array_split(np.argsort(cv_exp), k) # split into ordered groups by index
-            groups = np.ones(len(cv_exp))*np.nan # init nan group array
-            for gi, g in enumerate(grouping): # assign group labels
-                groups[g] = gi
-            groups = np.tile(groups, (G.shape[0], 1)) # expand so each row is the same
-        
-        # grouping by genes only
-        elif method == "kmeans_gene":
-            X = StandardScaler().fit_transform(G.T)
-            if n_pc is not None:
-                X = PCA(n_components=n_pc).fit_transform(X)
-            # if "auto", then select best k (k_gene)
-            if k == 'auto':
-                k = get_best_k(X, k_list)
-            kmeans = KMeans(n_clusters=k, random_state=444).fit(X)
-            groups = kmeans.labels_
-            groups = np.tile(groups, (G.shape[0], 1)) # expand so each row is the same
-        
-        # grouping by cells only
-        elif method == "kmeans_cell":
-            X = StandardScaler().fit_transform(G)
-            if n_pc is not None:
-                X = PCA(n_components=n_pc).fit_transform(X)
-            # if "auto", then select best k2 (k_cell)
-            if k == 'auto':
-                k = get_best_k(X, k_list)
-            kmeans = KMeans(n_clusters=k, random_state=444).fit(X)
-            groups = kmeans.labels_
-            groups = np.tile(groups, (G.shape[1], 1)).T # expand so each col is the same
             
-        # grouping by genes then by cells
-        elif method == "kmeans_gene_cell":
-            # gene grouping
-            X = StandardScaler().fit_transform(G.T)
-            if n_pc is not None:
-                X = PCA(n_components=n_pc).fit_transform(X)
-            # if "auto", then select best k (k_gene)
-            if k == 'auto':
-                k = get_best_k(X, k_list)
+    # grouping by genes then by cells
+    if method == "kmeans_gene_cell":
+        
+        ### Gene grouping
+        X = StandardScaler().fit_transform(G.T)
+        if n_pc is not None:
+            X = PCA(n_components=n_pc).fit_transform(X)
+        # if "auto", then select best k (k_gene)
+        if k == 'auto':
+            k = get_best_k(X, k_list)
+        # group genes
+        if k > 1:
             kmeans_genes = KMeans(n_clusters=k, random_state=444).fit(X)
             cluster_genes = kmeans_genes.labels_
-            groups = np.ones(G.shape)*np.nan # init groups array
-            counter = 0 # to index new groups with integers
-            # if "auto", then select best k2 (k_cell)
-            if k2 == 'auto':
-                X = StandardScaler().fit_transform(G)
-                if n_pc is not None:
-                    X = PCA(n_components=n_pc2).fit_transform(X)
-                k2 = get_best_k(X, k_list)
-            # within each gene group, group cells        
-            for cg in np.unique(cluster_genes):
+        else:
+            cluster_genes = np.zeros(X.shape[0])
+        
+        # set up groups
+        groups = np.ones(G.shape)*np.nan # init groups array
+        counter = 0 # to index new groups with integers
+        
+        ### Cell grouping
+        # if "auto", then select best k2 (k_cell)
+        if k2 == 'auto':
+            X = StandardScaler().fit_transform(G)
+            if n_pc2 is not None:
+                X = PCA(n_components=n_pc2).fit_transform(X)
+            k2 = get_best_k(X, k_list)
+        # within each gene group, group cells        
+        for cg in np.unique(cluster_genes):
+            if k2 > 1: # group if more than one cell group needed
                 G_group = G[:, cluster_genes==cg]
                 X_group = StandardScaler().fit_transform(G_group)
                 if n_pc2 is not None:
                     X_group = PCA(n_components=n_pc2).fit_transform(X_group)
                 kmeans_cells = KMeans(n_clusters=k2, random_state=444).fit(X_group)
                 cluster_cells = kmeans_cells.labels_
-                for cc in np.unique(cluster_cells):
-                    groups[np.ix_(cluster_cells==cc, cluster_genes==cg)] = counter
-                    counter += 1
-            
-        else:
-            raise Exception("method for get_grouping() is not recognized")
+            else: # set same labels for all cells
+                cluster_cells = np.zeros(G.shape[0])
+            # assign cell-gene stratified groupings
+            for cc in np.unique(cluster_cells): 
+                groups[np.ix_(cluster_cells==cc, cluster_genes==cg)] = counter
+                counter += 1
+        
+    else:
+        raise Exception("method for get_grouping() is not recognized")
     
     return(groups, k, k2)
 

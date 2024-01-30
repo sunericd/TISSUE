@@ -303,7 +303,7 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
     
     Additional Parameters
     ---------------------
-        save_mi [False or str] - if not False, then saves "multiple_imputations.npy" stacked matrix of imputed gene expression at save_mi path
+        save_mi [False or str] - if not False, then saves "multiple_imputations.npy" stacked matrix of imputed gene expression at save_mi path -- NOTE: this requires large memory
     '''
 
     # get uncertainties and scores from saved adata
