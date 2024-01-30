@@ -234,6 +234,9 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
                                              grouping_method="kmeans_gene_cell", k=4, k2=2)
 ```
 
+    Cell-centric variability computed in 2.9729208946228027 seconds
+
+
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
       warnings.warn(
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
@@ -244,6 +247,9 @@ tissue.main.conformalize_spatial_uncertainty(adata, "spage_predicted_expression"
       warnings.warn(
     /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
       warnings.warn(
+
+
+    Stratified grouping computed in 5.794720649719238 seconds
 
 
 Finally, we can calibrate the spatial uncertainty measures to get calibration scores and then use those to extract prediction intervals for any confidence level $1-\alpha$. This is done with `tissue.main.conformalize_prediction_interval()`
@@ -326,123 +332,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
   <tbody>
     <tr>
       <th>0</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
+      <td>0.259435</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.256212</td>
+      <td>0.259435</td>
     </tr>
     <tr>
       <th>...</th>
@@ -470,123 +476,123 @@ adata.obsm['spage_predicted_expression_wasserstein']
     </tr>
     <tr>
       <th>3400</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>3401</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>3402</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>3403</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
     <tr>
       <th>3404</th>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>...</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
+      <td>0.165032</td>
       <td>NaN</td>
       <td>NaN</td>
-      <td>0.164583</td>
+      <td>0.165032</td>
     </tr>
   </tbody>
 </table>
@@ -714,8 +720,8 @@ print("t-statistic = "+str(round(adata.uns['spage_A_B_tstat'][target_gene].value
 print("P = "+str(round(adata.uns['spage_A_B_pvalue'][target_gene].values[0],5)))
 ```
 
-    t-statistic = -2.46568
-    P = 0.01735
+    t-statistic = -1.7752
+    P = 0.08816
 
 
 Testing of our target gene (Plp1) results in significant under-expression in group A as compared to group B, suggesting that Plp1 could be a marker gene for the cell types / regions in group B.
@@ -764,7 +770,7 @@ print(adata_filtered.shape)
     (3405, 31)
     
     After TISSUE cell filtering:
-    (2870, 31)
+    (2869, 31)
 
 
 And similarly, we can check the balance in the two cell groups after filtering:
@@ -809,7 +815,7 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
     </tr>
     <tr>
       <th>Number of Cells</th>
-      <td>1255</td>
+      <td>1254</td>
       <td>1615</td>
     </tr>
   </tbody>
@@ -868,8 +874,8 @@ print(f"Accuracy Score: {accuracy_score(test_labels, pred_test)}")
 print(f"ROC-AUC Score: {roc_auc_score(test_labels_num, pred_test_scores[:,1])}")
 ```
 
-    Accuracy Score: 0.7926829268292683
-    ROC-AUC Score: 0.864171974522293
+    Accuracy Score: 0.8101045296167247
+    ROC-AUC Score: 0.8704985301322883
 
 
 The model performs quite well! It has high accuracy and high ROC-AUC for a relatively balanced binary classification problem. A similar approach can be taken to leverage TISSUE uncertainties in training/evaluating other model architectures (e.g. linear regression, random forest, neural nets).
@@ -908,7 +914,7 @@ PC_reduced = adata.uns['spage_predicted_expression_PC15_filtered_'].copy()
 print(PC_reduced.shape)
 ```
 
-    (2870, 15)
+    (2869, 15)
 
 
 We now have a reduced representation of our original data that is filtered by TISSUE and has 15 principal components. We can visualize the first two principal components:
@@ -957,7 +963,7 @@ print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
       warnings.warn(
 
 
-    0.22030332212082546
+    0.21945847171154445
 
 
 Evidently, the clustering with TISSUE-filtered principal components can provide some degree of separation between the two cell groups that we defined previously.
@@ -1004,7 +1010,9 @@ plt.show()
 
 Similarly to TISSUE cell filtering PCA, we see that TISSUE-WPCA can visually separate the two cell groups in the PCA plot.
 
-## Additional consideration: Hyperparameter selection
+# Additional considerations
+
+## Hyperparameter selection:
 
 At various parts of the TISSUE pipeline, the user can select different hyperparameters. Here we outline some guiding principles for reasonably selecting these hyperparameters:
 
@@ -1015,7 +1023,7 @@ At various parts of the TISSUE pipeline, the user can select different hyperpara
 - `k`, `k2` in `tissue.main.conformalize_spatial_uncertainty()` - these are the gene and cell stratified group numbers respectively. You can try different values for each of these, but we recommend staying below 4 for either parameter. In the manuscript, we primarily used `k=4` and `k2=1`. If you don't want to choose, TISSUE can automatically select these hyperparameters if you set `k='auto'` and `k2='auto'`.
 
 
-## Additional consideration: Runtime
+## Computational runtime and speed ups:
 
 If you are experiencing slow runtimes with TISSUE, there are several things to check or change for faster runtime (also refer to Extended Data Figure 9 in our publication for runtime breakdown in the first version of TISSUE for different-sized datasets):
 
@@ -1029,9 +1037,28 @@ If you are experiencing slow runtimes with TISSUE, there are several things to c
 - Set `weight='exp_cos'` and `weight_npc` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` to perform cosine similarity weights based on low-dimensionality (for better runtime and reduce high-dimensional distortions)
 - Set `n_pc` and `n_pc2` to some integer (e.g. 15) in `tissue.main.conformalize_spatial_uncertainty()` so that k-means clustering will be done on lower dimensional space (for better runtime and performance)
 
-## UNDER DEVELOPMENT:
+**Other runtime tips**:
+
+- Turn off Wasserstein calculation in `tissue.main.conformalize_prediction_interval()` by setting `compute_wasserstein=False` (default)
+
+
+
+## Memory usage:
+
+We have optimized TISSUE to be memory-efficient with respect the size of the original dataset. Since spatial transcriptomics datasets can be very large, and TISSUE requires additional overhead for some of its operations, here are some suggestions for dealing with memory issues:
+
+- For downsizing datasets with many cells or many genes (to predict), refer to the previous section on runtimes for ways of downsampling for both improved runtime and lower memory usage
+
+- In `tissue.main.build_spatial_graph()`, you can consider setting `radius` to a value (default is None) for any of the radius-based methods. This is more important in older versions of TISSUE, which were not optimized.
+
+- In `tissue.downstream.multiple_imputation_testing()`, make sure that `save_mi=False` which stops saving of each multiple imputation into memory.
+
+
+
+
+# UNDER DEVELOPMENT:
 - Multi-threading for making cross-validation predictions in `tissue.main.predict_gene_expression()`.
-- Sparse operations to speed up `tissue.main.conformalize_spatial_uncertainty()`.
+- Sparse operations to speed up `tissue.main.conformalize_spatial_uncertainty()` (in particular sparse calculations in `tissue.main.get_spatial_uncertainty_scores()`).
 
 
 

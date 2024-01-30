@@ -541,10 +541,13 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
         Saves an upper and lower bound in adata.obsm[predicted+"_lo"/"_hi"]
     '''
     # get spatial uncertainty and add to annotations
+    import time
+    start = time.time()
     scores, residuals, G_stdev, G = get_spatial_uncertainty_scores(adata, predicted, calib_genes,
                                                                    weight=weight,
                                                                    mean_normalized=mean_normalized,
                                                                    add_one=add_one)
+    print(f"Cell-centric variability computed in {time.time()-start} seconds")
     
     adata.obsm[predicted+"_uncertainty"] = pd.DataFrame(G_stdev,
                                                         columns=adata.obsm[predicted].columns,
@@ -557,10 +560,12 @@ def conformalize_spatial_uncertainty (adata, predicted, calib_genes, weight='uni
                                                   index=adata.obsm[predicted].index)                                              
         
     # define group
+    start = time.time()
     if grouping_method is None:
         groups = np.zeros(G.shape)
     else:
         groups, k_final, k2_final = get_grouping(G, method=grouping_method, k=k, k2=k2, n_pc=n_pc, n_pc2=n_pc2)
+    print(f"Stratified grouping computed in {time.time()-start} seconds")
     
     # add grouping and k-values to anndata
     adata.obsm[predicted+"_groups"] = groups
@@ -966,7 +971,7 @@ def build_calibration_scores (adata, predicted, calib_genes, symmetric=False, in
             residuals_group = residuals.copy()[groups[:, calib_idxs]==group]
         if symmetric is True: # symmetric calibration set
             if include_zero_scores is False:
-                scores_flattened = scores_group[residuals_group != 0].flatten() # exclude zeros
+                scores_flattened = scores_group[residuals_group != 0].flatten() # exclude zeros -- empirically this way is fastest
             else:
                 scores_flattened = scores_group.flatten()
             scores_flattened_dict[str(group)] = scores_flattened[np.isfinite(scores_flattened)] # add to dict
