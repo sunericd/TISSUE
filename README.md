@@ -4,6 +4,12 @@
 ![plot](./pipeline.png)
 
 
+If you find TISSUE useful, please consider citing our publication:
+
+**Sun, E.D., Ma, R., Navarro Negredo, P. et al. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Nat Methods (2024). https://doi.org/10.1038/s41592-024-02184-y**
+
+[![Paper](https://img.shields.io/badge/Nature_Methods-DOI-orange)](https://doi.org/10.1038/s41592-024-02184-y)
+
 
 ## Installation and setup
 
@@ -253,25 +259,12 @@ Finally, we can calibrate the spatial uncertainty measures to get calibration sc
 # get prediction interval for 67% coverage
 
 tissue.main.conformalize_prediction_interval (adata, "spage_predicted_expression", calib_genes=adata.var_names,
-                                              alpha_level=0.23, compute_wasserstein=True)
+                                              alpha_level=0.23)
+
+# set `compute_wasserstein=True` to compute a measure indicating the distance between the cell-centric variability values 
+# of the predicted genes and the values of their support (i.e. calibration group) in the original data. 
+# The lower this value, the better supported the predicted group.
 ```
-
-
-```python
-adata
-```
-
-
-
-
-    AnnData object with n_obs × n_vars = 3405 × 31
-        uns: 'conf_genes_used', 'target_genes_used', 'spatial_neighbors', 'spage_predicted_expression_kg', 'spage_predicted_expression_kc', 'alpha'
-        obsm: 'spatial', 'spage_predicted_expression', 'spage_predicted_expression_uncertainty', 'spage_predicted_expression_score', 'spage_predicted_expression_error', 'spage_predicted_expression_groups', 'spage_predicted_expression_lo', 'spage_predicted_expression_hi', 'spage_predicted_expression_wasserstein'
-        obsp: 'spatial_connectivities', 'spatial_distances'
-
-
-
-Here we turned on the Wasserstein distance metric, which returns a measure indicating the distance between the cell-centric variability values of the predicted genes and the values of their support (i.e. calibration group) in the original data. The lower this value, the better supported the predicted group.
 
 Now let's visualize what these prediction intervals look like for the target (unseen) gene and how it compares to the actual prediction errors.
 
@@ -322,7 +315,7 @@ plt.show()
 
 
     
-![png](README_files/README_24_0.png)
+![png](README_files/README_22_0.png)
     
 
 
@@ -354,16 +347,19 @@ After, we construct some binary labels for the cells in the dataset:
 adata.obs['condition'] = ['A' if i < round(adata.shape[0]/2) else 'B' for i in range(adata.shape[0])]
 
 # plot conditions
-sc.pl.embedding(adata, 'spatial', color='condition')
+plt.scatter(adata[adata.obs.condition=="A"].obsm['spatial'][:,0],
+            adata[adata.obs.condition=="A"].obsm['spatial'][:,1],
+            c='tab:red', s=3, label="A")
+plt.scatter(adata[adata.obs.condition=="B"].obsm['spatial'][:,0],
+            adata[adata.obs.condition=="B"].obsm['spatial'][:,1],
+            c='tab:blue', s=3, label="B")
+plt.legend(loc='best')
+plt.show()
 ```
-
-    /home/edsun/anaconda3/envs/tissue/lib/python3.8/site-packages/scanpy/plotting/_tools/scatterplots.py:392: UserWarning: No data for colormapping provided via 'c'. Parameters 'cmap' will be ignored
-      cax = scatter(
-
 
 
     
-![png](README_files/README_28_1.png)
+![png](README_files/README_26_0.png)
     
 
 
@@ -392,11 +388,13 @@ print("t-statistic = "+str(round(adata.uns['spage_A_B_tstat'][target_gene].value
 print("P = "+str(round(adata.uns['spage_A_B_pvalue'][target_gene].values[0],5)))
 ```
 
-    t-statistic = -2.29955
-    P = 0.03283
+    t-statistic = -2.38565
+    P = 0.02371
 
 
 Testing of our target gene (Plp1) results in significant under-expression in group A as compared to group B, suggesting that Plp1 could be a marker gene for the cell types / regions in group B.
+
+**NOTE: Many TISSUE modules rely on stochastic sampling so the printed metrics may vary slightly from run to run.**
 
 ### Tutorial 4: TISSUE cell filtering for supervised learning
 
@@ -442,7 +440,7 @@ print(adata_filtered.shape)
     (3405, 31)
     
     After TISSUE cell filtering:
-    (2870, 31)
+    (2862, 31)
 
 
 And similarly, we can check the balance in the two cell groups after filtering:
@@ -487,8 +485,8 @@ pd.DataFrame(np.unique(adata_filtered.obs['condition'], return_counts=True),inde
     </tr>
     <tr>
       <th>Number of Cells</th>
-      <td>1252</td>
-      <td>1618</td>
+      <td>1250</td>
+      <td>1612</td>
     </tr>
   </tbody>
 </table>
@@ -546,8 +544,8 @@ print(f"Accuracy Score: {accuracy_score(test_labels, pred_test)}")
 print(f"ROC-AUC Score: {roc_auc_score(test_labels_num, pred_test_scores[:,1])}")
 ```
 
-    Accuracy Score: 0.7961672473867596
-    ROC-AUC Score: 0.8631798138167566
+    Accuracy Score: 0.8024475524475524
+    ROC-AUC Score: 0.8765594181459566
 
 
 The model performs quite well! It has high accuracy and high ROC-AUC for a relatively balanced binary classification problem. A similar approach can be taken to leverage TISSUE uncertainties in training/evaluating other model architectures (e.g. linear regression, random forest, neural nets).
@@ -586,7 +584,7 @@ PC_reduced = adata.uns['spage_predicted_expression_PC15_filtered_'].copy()
 print(PC_reduced.shape)
 ```
 
-    (2870, 15)
+    (2862, 15)
 
 
 We now have a reduced representation of our original data that is filtered by TISSUE and has 15 principal components. We can visualize the first two principal components:
@@ -598,10 +596,10 @@ We now have a reduced representation of our original data that is filtered by TI
 plt.title("TISSUE-Filtered PCA")
 plt.scatter(PC_reduced[adata_filtered.obs['condition']=='A',0],
             PC_reduced[adata_filtered.obs['condition']=='A',1],
-            c="tab:blue", label="A")
+            c="tab:red", s=3, label="A")
 plt.scatter(PC_reduced[adata_filtered.obs['condition']=='B',0],
             PC_reduced[adata_filtered.obs['condition']=='B',1],
-            c="tab:orange", label="B")
+            c="tab:blue", s=3, label="B")
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel("PC 1")
 plt.ylabel("PC 2")
@@ -610,7 +608,7 @@ plt.show()
 
 
     
-![png](README_files/README_54_0.png)
+![png](README_files/README_52_0.png)
     
 
 
@@ -635,7 +633,7 @@ print(adjusted_rand_score(adata_filtered.obs['condition'], clusters))
       warnings.warn(
 
 
-    0.21763240085325367
+    0.218865537222824
 
 
 Evidently, the clustering with TISSUE-filtered principal components can provide some degree of separation between the two cell groups that we defined previously.
@@ -666,8 +664,10 @@ Now that we have performed TISSUE-WPCA, we can access the resulting principal co
 X_pc = adata.obsm['spage_predicted_expression_PC15_']
 
 plt.title("TISSUE Weighted PCA")
-plt.scatter(X_pc[adata.obs['condition']=='A',0], X_pc[adata.obs['condition']=='A',1], c="tab:blue", label="A")
-plt.scatter(X_pc[adata.obs['condition']=='B',0], X_pc[adata.obs['condition']=='B',1], c="tab:orange", label="B")
+plt.scatter(X_pc[adata.obs['condition']=='A',0], X_pc[adata.obs['condition']=='A',1],
+            c="tab:red", s=3, label="A")
+plt.scatter(X_pc[adata.obs['condition']=='B',0], X_pc[adata.obs['condition']=='B',1],
+            c="tab:blue", s=3, label="B")
 plt.xlabel("PC 1")
 plt.ylabel("PC 2")
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
@@ -676,7 +676,7 @@ plt.show()
 
 
     
-![png](README_files/README_62_0.png)
+![png](README_files/README_60_0.png)
     
 
 
@@ -730,11 +730,24 @@ We have optimized TISSUE to be memory-efficient with respect the size of the ori
 
 # UNDER DEVELOPMENT:
 - Multi-threading for making cross-validation predictions in `tissue.main.predict_gene_expression()`.
+- Gene filtering guidelines / strategy
+- Suppress warning printouts
 
 # Citation
 
-For Jupyter notebooks and Python scripts associated with our original publication, please refer to https://github.com/sunericd/tissue-figures-and-analyses.git. **NOTE: For the original publication, we used TISSUE version 0.0.2**
-
 If you find this code useful, we would appreciate it if you cite the following publications:
 
-**Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).**
+---
+<font size="5">Sun, E.D., Ma, R., Navarro Negredo, P. et al. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Nat Methods (2024). https://doi.org/10.1038/s41592-024-02184-y</font> 
+
+---
+**Preprint:**
+
+Sun ED, Ma R, Navarro Negredo P, Brunet A, Zou J. TISSUE: uncertainty-calibrated prediction of single-cell spatial transcriptomics improves downstream analyses. Preprint at https://doi.org/10.1101/2023.04.25.538326 (2023).
+
+For Jupyter notebooks and Python scripts associated with our original publication, please refer to https://github.com/sunericd/tissue-figures-and-analyses.git. **NOTE: For the original publication, we used TISSUE version 0.0.2**
+
+
+```python
+
+```
