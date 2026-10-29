@@ -18,7 +18,7 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, test=
                                  group1=None, group2=None, symmetric=False, return_keys=False, save_mi=False):
     '''
     Uses multiple imputation with the score distributions to perform hypothesis testing
-    
+
     Parameters
     ----------
         adata [AnnData] - contains adata.obsm[predicted] corresponding to the predicted gene expression
@@ -38,12 +38,12 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, test=
         symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
         return_keys [bool] - whether to return the keys for which to access the results from adata
         save_mi [False or str] - multiple imputation saving (only used for multiple_imputation_ttest())
-        
+
     Returns
     -------
         Modifies adata in-place to add the statistics and test results to metadata
         Optionally returns the keys to access the results from adata
-        
+
     '''
     #####################################################################
     # T-test (default) - this is the option with best theoretical support
@@ -51,67 +51,67 @@ def multiple_imputation_testing (adata, predicted, calib_genes, condition, test=
     if test == "ttest":
         keys = multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imputations=n_imputations,
                                  group1=group1, group2=group2, symmetric=symmetric, save_mi=save_mi)
-            
+
     #####################################################################
-    # One-sample ("less"/"greater") Wilcoxon test  
-    #####################################################################    
+    # One-sample ("less"/"greater") Wilcoxon test
+    #####################################################################
     elif test == "wilcoxon_less":
         keys = multiple_imputation_wilcoxon (adata, predicted, calib_genes, condition, n_imputations=n_imputations,
                                  group1=group1, group2=group2, symmetric=symmetric, direction='less')
     elif test == "wilcoxon_greater":
         keys = multiple_imputation_wilcoxon (adata, predicted, calib_genes, condition, n_imputations=n_imputations,
                                  group1=group1, group2=group2, symmetric=symmetric, direction='greater')
-                                 
+
     #####################################################################
-    # SpatialDE (spatially variable genes) test 
-    ##################################################################### 
+    # SpatialDE (spatially variable genes) test
+    #####################################################################
     elif test == "spatialde":
         keys = multiple_imputation_spatialde (adata, predicted, calib_genes, n_imputations=n_imputations, symmetric=symmetric)
-    
+
     # raise exception if test does not match options
     else:
         raise Exception ("Specified test not recognized")
-        
+
     if return_keys is True:
-        
+
         return(keys)
 
 
 def multiple_imputation_spatialde (adata, predicted, calib_genes, n_imputations=100, symmetric=False):
     '''
     Runs TISSUE multiple imputation SpatialDE test using p-value transformation
-    
+
     See multiple_imputation_testing() for details on parameters
     '''
     import SpatialDE
-    
+
     # get uncertainties and scores from saved adata
     scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
-    
+
     ### Building calibration sets for scores
-    
+
     scores_flattened_dict = build_calibration_scores(adata, predicted, calib_genes, symmetric=symmetric,
                                                      include_zero_scores=True, trim_quantiles=[None, 0.8]) # trim top 20% scores
-    
+
     ### Multiple imputation
 
     # init dictionary to hold results
     stat_dict = {}
     stat_dict["pvalue"] = {}
-    
+
     for m in range(n_imputations):
-        
+
         # generate new imputation
         new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
-        
+
         key = "spatialde"
-    
+
         if m == 0: # init list
             stat_dict["pvalue"][key] = []
-        
+
         # get spatialDE p-values
         normalized_matrix = new_G/(1+np.sum(new_G,axis=1)[:,None])
-        normalized_matrix = np.log1p((normalized_matrix-np.min(normalized_matrix)) * 100) 
+        normalized_matrix = np.log1p((normalized_matrix-np.min(normalized_matrix)) * 100)
         sp_df = pd.DataFrame(normalized_matrix,
                           columns=adata.obsm[predicted].columns,
                           index=adata.obsm[predicted].index)
@@ -139,7 +139,7 @@ def multiple_imputation_spatialde (adata, predicted, calib_genes, n_imputations=
         for ci in range(pval_arr.shape[1]):
             mi_pval = multiply_imputed_pvalue (pval_arr[:,ci], method="licht_rubin")
             pooled_results_dict['pvalue'][key].append(mi_pval)
-     
+
     # add stats to adata
     keys_list = []
     for key_measure in pooled_results_dict.keys():
@@ -147,7 +147,7 @@ def multiple_imputation_spatialde (adata, predicted, calib_genes, n_imputations=
             adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(np.array(pooled_results_dict[key_measure][key_comparison])[None,:],
                                                                                                  columns=adata.obsm[predicted].columns)
             keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
-    
+
     return(keys_list)
 
 
@@ -155,87 +155,87 @@ def multiple_imputation_wilcoxon (adata, predicted, calib_genes, condition, n_im
                                   group1=None, group2=None, symmetric=False, direction="greater"):
     '''
     Runs TISSUE multiple imputation one-sample Wilcoxon (greater/lesser) test using p-value transformation
-    
+
     See multiple_imputation_testing() for details on parameters
     '''
     from scipy.stats import mannwhitneyu
-    
+
     # get uncertainties and scores from saved adata
     scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
-    
+
     ### Building calibration sets for scores
-    
+
     scores_flattened_dict = build_calibration_scores(adata, predicted, calib_genes, symmetric=symmetric,
                                                      include_zero_scores=True, trim_quantiles=[None, 0.8]) # trim top 20% scores
-    
+
     ### Multiple imputation
 
     # init dictionary to hold results
     stat_dict = {}
     stat_dict["pvalue"] = {}
-    
+
     # cast condition to str
     condition = str(condition)
-    
+
     for m in range(n_imputations):
-        
+
         # generate new imputation
         new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
-            
+
         if group1 is None: # pairwise comparisons against all
-            
+
             for g1 in np.unique(adata.obs[condition]):
-                
+
                 key = str(g1)+"_all"
-            
+
                 if m == 0: # init list
                     stat_dict["pvalue"][key] = []
-                
+
                 g1_bool = (adata.obs[condition] == g1) # g1
                 g2_bool = (adata.obs[condition] != g1) # all other
-                
+
                 # get SpatialDE p-values
                 pval = []
                 for ci in range(new_G.shape[1]):
                     u,p = mannwhitneyu(new_G[g1_bool,ci], new_G[g2_bool,ci], alternative=direction)
                     pval.append(p)
-                
+
                 stat_dict["pvalue"][key].append(pval)
-                
+
         elif group2 is None: # group1 vs all
-        
+
             key = str(group1)+"_all"
-            
+
             if m == 0: # init list
                 stat_dict["pvalue"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] != group1) # all other
-            
+
             # get wilcoxon p-values
             pval = []
             for ci in range(new_G.shape[1]):
                 u,p = mannwhitneyu(new_G[g1_bool,ci], new_G[g2_bool,ci], alternative=direction)
                 pval.append(p)
-            
+
             stat_dict["pvalue"][key].append(pval)
-            
+
         else: # group1 vs group2
-            
+
             key = str(group1)+"_"+str(group2)
-            
+
             if m == 0: # init list
                 stat_dict["pvalue"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] == group2) # g2
-            
+
             # get wilcoxon p-values
             pval = []
             for ci in range(new_G.shape[1]):
                 u,p = mannwhitneyu(new_G[g1_bool,ci], new_G[g2_bool,ci], alternative=direction)
                 pval.append(p)
-                
+
             stat_dict["pvalue"][key].append(pval)
 
     # pool statistics
@@ -249,7 +249,7 @@ def multiple_imputation_wilcoxon (adata, predicted, calib_genes, condition, n_im
         for ci in range(pval_arr.shape[1]):
             mi_pval = multiply_imputed_pvalue (pval_arr[:,ci], method="licht_rubin")
             pooled_results_dict['pvalue'][key].append(mi_pval)
-     
+
     # add stats to adata
     keys_list = []
     for key_measure in pooled_results_dict.keys():
@@ -257,36 +257,36 @@ def multiple_imputation_wilcoxon (adata, predicted, calib_genes, condition, n_im
             adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(np.array(pooled_results_dict[key_measure][key_comparison])[None,:],
                                                                                                  columns=adata.obsm[predicted].columns)
             keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
-    
+
     return(keys_list)
 
 
 def multiply_imputed_pvalue (pvalues, method="licht_rubin"):
     '''
     Computes a multiply imputed p-value from a list of p-values according to Licht-Rubin procedure or median procedure
-    
+
     Parameters
     ----------
         pvalues [array-like] - array of p-values from multiple imputation tests
         method [str] - which method for p-value calculation to use: "licht_rubin" or "median"
-        
+
     Returns
     -------
         mi_pvalue [float] - p-value modified for multiple imputation
-        
+
     See reference for technical details: https://stefvanbuuren.name/fimd/sec-multiparameter.html#sec:chi
     '''
     from scipy.stats import norm
-    
+
     if method == "licht_rubin":
         z = norm.ppf(pvalues)  # transform to z-scale
         num = np.nanmean(z)
         den = np.sqrt(1 + np.nanvar(z))
         mi_pvalue = norm.cdf( num / den) # average and transform back
-    
+
     elif method == "median":
         mi_pvalue = np.nanmedian(pvalues)
-    
+
     else:
         raise Exception ("method for multiply_imputed_pvalue() not recognized")
 
@@ -298,9 +298,9 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
                                group1=None, group2=None, symmetric=False, save_mi=False):
     '''
     Runs TISSUE multiple imputation two-sample t-test using Rubin's rules
-    
+
     See multiple_imputation_testing() for details on parameters
-    
+
     Additional Parameters
     ---------------------
         save_mi [False or str] - if not False, then saves "multiple_imputations.npy" stacked matrix of imputed gene expression at save_mi path -- NOTE: this requires large memory
@@ -308,83 +308,83 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
 
     # get uncertainties and scores from saved adata
     scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
-    
+
     ### Building calibration sets for scores
-    
+
     scores_flattened_dict = build_calibration_scores(adata, predicted, calib_genes, symmetric=symmetric,
                                                      include_zero_scores=True, trim_quantiles=[None, 0.8]) # trim top 20% scores
-    
+
     ### Multiple imputation
 
     # init dictionary to hold results (for independent two-sample t-test)
     stat_dict = {}
     stat_dict["mean_difference"] = {}
     stat_dict["standard_deviation"] = {}
-    
+
     # cast condition to str
     condition = str(condition)
-    
+
     new_G_list = [] # for saving multiple imputations
-    
+
     for m in range(n_imputations):
-        
+
         # generate new imputation
         new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
         if save_mi is not False:
             new_G_list.append(new_G)
-    
+
         # calculate statistics for the imputation using approach from Palmer & Peer, 2016
-        
+
         if group1 is None: # pairwise comparisons against all
-            
+
             for g1 in np.unique(adata.obs[condition]):
-                
+
                 key = str(g1)+"_all"
-            
+
                 if m == 0: # init list
                     stat_dict["mean_difference"][key] = []
                     stat_dict["standard_deviation"][key] = []
-                
+
                 g1_bool = (adata.obs[condition] == g1) # g1
                 g2_bool = (adata.obs[condition] != g1) # all other
-                
+
                 mean_diff, pooled_sd = get_ttest_stats(new_G, g1_bool, g2_bool) # get ttest stats
                 stat_dict["mean_difference"][key].append(mean_diff)
                 stat_dict["standard_deviation"][key].append(pooled_sd)
-                
+
         elif group2 is None: # group1 vs all
-        
+
             key = str(group1)+"_all"
-            
+
             if m == 0: # init list
                 stat_dict["mean_difference"][key] = []
                 stat_dict["standard_deviation"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] != group1) # all other
-            
+
             mean_diff, pooled_sd = get_ttest_stats(new_G, g1_bool, g2_bool) # get ttest stats
             stat_dict["mean_difference"][key].append(mean_diff)
             stat_dict["standard_deviation"][key].append(pooled_sd)
-            
+
         else: # group1 vs group2
-            
+
             key = str(group1)+"_"+str(group2)
-            
+
             if m == 0: # init list
                 stat_dict["mean_difference"][key] = []
                 stat_dict["standard_deviation"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] == group2) # g2
-            
+
             mean_diff, pooled_sd = get_ttest_stats(new_G, g1_bool, g2_bool) # get ttest stats
             stat_dict["mean_difference"][key].append(mean_diff)
             stat_dict["standard_deviation"][key].append(pooled_sd)
 
     # pool statistics and perform t-test
     pooled_results_dict = pool_multiple_stats(stat_dict)
-     
+
     # add stats to adata
     keys_list = []
     for key_measure in pooled_results_dict.keys():
@@ -392,13 +392,13 @@ def multiple_imputation_ttest (adata, predicted, calib_genes, condition, n_imput
             adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(pooled_results_dict[key_measure][key_comparison][None,:],
                                                                                                  columns=adata.obsm[predicted].columns)
             keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
-    
+
     # save multiple imputations
     if save_mi is not False:
         # stack all imputations and save
         stacked_mi = np.dstack(new_G_list)
         np.save(os.path.join(save_mi,f"{predicted}.npy"), stacked_mi)
-    
+
     return(keys_list)
 
 
@@ -406,7 +406,7 @@ def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_gen
                                  group1=None, group2=None, symmetric=False, return_keys=False, load_mi=False):
     '''
     Uses multiple imputation with the score distributions to perform hypothesis testing on gene signatures
-    
+
     Parameters
     ----------
         sig_dirpath [str] - path to the directory containing the gene signatures organized as:
@@ -426,52 +426,52 @@ def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_gen
         n_imputations [int] - number of imputations to use
         symmetric [bool] - whether to have symmetric (or non-symmetric) prediction intervals
         return_keys [bool] - whether to return the keys for which to access the results from adata
-        load_mi [bool] - whether to save "{predicted}.npy" stacked matrix of all multiple imputations at sig_dirpath 
-        
+        load_mi [bool] - whether to save "{predicted}.npy" stacked matrix of all multiple imputations at sig_dirpath
+
     Returns
     -------
         Modifies adata in-place to add the statistics and test results to metadata
         Optionally returns the keys to access the results from adata
-        
+
     '''
     #####################################################################
     # T-test (default) - this is the only option currently for signatures
     #####################################################################
-    
+
     if load_mi is False:
         # get uncertainties and scores from saved adata
         scores, residuals, G_stdev, G, groups = get_spatial_uncertainty_scores_from_metadata (adata, predicted)
-        
+
         ### Building calibration sets for scores
-        
+
         scores_flattened_dict = build_calibration_scores(adata, predicted, calib_genes, symmetric=symmetric,
                                                          include_zero_scores=True, trim_quantiles=[None, 0.8]) # trim top 20% scores
     else: # load in saved multiple imputations
         mi_path = os.path.join(sig_dirpath,f"{predicted}.npy") # path to saved multiple imputations
         mi_stacked = np.load(mi_path)
-    
+
     ### Multiple imputation
 
     # init dictionary to hold results (for independent two-sample t-test)
     stat_dict = {}
     stat_dict["mean_difference"] = {}
     stat_dict["standard_deviation"] = {}
-    
+
     # cast condition to str
     condition = str(condition)
-    
+
     for m in range(n_imputations):
-        
+
         # generate new imputation
         if load_mi is False:
             new_G = sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=symmetric)
         else:
             new_G = mi_stacked[:,:,m].copy() # take the m-th multiple imputation
-        
+
         # compute all signatures
-        imputed_sigs = [] 
+        imputed_sigs = []
         sig_names = []
-        
+
         for sigdir in next(os.walk(sig_dirpath))[1]: # iterate all top-level signature directories
             # read in genes
             with open(os.path.join(sig_dirpath,sigdir,"genes.txt")) as f:
@@ -497,65 +497,65 @@ def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_gen
 
         # construct gene signature matrix
         imputed_sigs = np.vstack(imputed_sigs).T
-        
+
         # keep running average of imputed gene signatures
         if m == 0:
             mean_imputed_sigs = imputed_sigs * 1/n_imputations
         else:
             mean_imputed_sigs += imputed_sigs * 1/n_imputations
-        
+
         # calculate statistics for the imputation using approach from Palmer & Peer, 2016
-        
+
         if group1 is None: # pairwise comparisons against all
-            
+
             for g1 in np.unique(adata.obs[condition]):
-                
+
                 key = str(g1)+"_all"
-            
+
                 if m == 0: # init list
                     stat_dict["mean_difference"][key] = []
                     stat_dict["standard_deviation"][key] = []
-                
+
                 g1_bool = (adata.obs[condition] == g1) # g1
                 g2_bool = (adata.obs[condition] != g1) # all other
-                
+
                 mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
                 stat_dict["mean_difference"][key].append(mean_diff)
                 stat_dict["standard_deviation"][key].append(pooled_sd)
-                
+
         elif group2 is None: # group1 vs all
-        
+
             key = str(group1)+"_all"
-            
+
             if m == 0: # init list
                 stat_dict["mean_difference"][key] = []
                 stat_dict["standard_deviation"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] != group1) # all other
-            
+
             mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
             stat_dict["mean_difference"][key].append(mean_diff)
             stat_dict["standard_deviation"][key].append(pooled_sd)
-            
+
         else: # group1 vs group2
-            
+
             key = str(group1)+"_"+str(group2)
-            
+
             if m == 0: # init list
                 stat_dict["mean_difference"][key] = []
                 stat_dict["standard_deviation"][key] = []
-            
+
             g1_bool = (adata.obs[condition] == group1) # g1
             g2_bool = (adata.obs[condition] == group2) # g2
-            
+
             mean_diff, pooled_sd = get_ttest_stats(imputed_sigs, g1_bool, g2_bool) # get ttest stats
             stat_dict["mean_difference"][key].append(mean_diff)
             stat_dict["standard_deviation"][key].append(pooled_sd)
 
     # pool statistics and perform t-test
     pooled_results_dict = pool_multiple_stats(stat_dict)
-     
+
     # add stats to adata
     keys_list = []
     for key_measure in pooled_results_dict.keys():
@@ -563,12 +563,12 @@ def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_gen
             adata.uns[predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure] = pd.DataFrame(pooled_results_dict[key_measure][key_comparison][None,:],
                                                                                                  columns=sig_names)
             keys_list.append(predicted.split("_")[0]+"_"+key_comparison+"_"+key_measure)
-                    
+
     # add gene sigs to adata
     adata.obsm[predicted+"_gene_signatures"] = pd.DataFrame(mean_imputed_sigs, columns=sig_names, index=adata.obs_names)
-    
+
     if return_keys is True:
-        
+
         return(keys_list)
 
 
@@ -576,27 +576,27 @@ def multiple_imputation_gene_signature (sig_dirpath, adata, predicted, calib_gen
 def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict, symmetric=False):
     '''
     Creates a new imputation by sampling from scores and adding to G
-    
+
     Parameters
     ----------
         G, G_stdev, groups - outputs of get_spatial_uncertainty_scores_from_metadata()
         scores_flattened_dict - output of build_calibration_scores()
-    
+
     See multiple_imputation_testing() for more details of arguments
-    
+
     Returns
     -------
         new_G - array of the new sampled predicted gene expression (same dimensions as new_G: cells x genes)
     '''
     new_scores = np.zeros(G.shape) # init array for sampled scores
     new_add_sub = np.zeros(G.shape) # init array for add/subtract coefs
-    
+
     # for each group, sample calibration score and corresponding imputations
     unique_groups, unique_counts = np.unique(groups[~np.isnan(groups)], return_counts=True)
-    
+
     for ui, group in enumerate(unique_groups):
         count = unique_counts[ui] # get number of values in group
-        
+
         # sample scores and add/sub indicators
         if symmetric is True:
             scores_flattened = scores_flattened_dict[str(group)] # get scores
@@ -616,11 +616,11 @@ def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict
             sampled_idxs = np.random.choice(np.arange(len(scores_flattened)), count, replace=True) # with replacement
             sampled_scores = scores_flattened[sampled_idxs]
             add_sub = lo_hi_indicators[sampled_idxs]
-        
+
         # append to new_scores and new_add_sub
         new_scores[groups==group] = sampled_scores
         new_add_sub[groups==group] = add_sub
-        
+
     # calculate new imputation
     new_G = G + new_add_sub*(new_scores*G_stdev)
 
@@ -630,13 +630,13 @@ def sample_new_imputation_from_scores (G, G_stdev, groups, scores_flattened_dict
 def get_ttest_stats(G, g1_bool, g2_bool):
     '''
     Computes mean_diff and pooled SD for each column of G independently
-    
+
     Parameters
     ----------
         G [array] - 2D array with columns as genes and rows as cells
         g1_bool [bool array] - 1D array with length equal to number of rows in G; labels group1
         g2_bool [bool array] - 1D array with length equal to number of rows in G; labels group2
-        
+
     Returns
     -------
         mean_diff - mean difference for t-test
@@ -647,20 +647,20 @@ def get_ttest_stats(G, g1_bool, g2_bool):
     n2 = np.count_nonzero(~np.isnan(G[g2_bool,:]), axis=0)
     sp = np.sqrt( ( (n1-1)*(np.nanvar(G[g1_bool,:],axis=0)) + (n2-1)*(np.nanvar(G[g2_bool,:],axis=0)) ) / (n1+n2-2) )
     pooled_sd = np.sqrt(1/n1 + 1/n2) * sp
-    
+
     return(mean_diff, pooled_sd)
 
 
 def two_sample_ttest (G, g1_bool, g2_bool):
     '''
     Computes two-sample t-test for unequal sample sizes using get_ttest_stats()
-    
+
     Parameters
     ----------
         G [array] - 2D array with columns as genes and rows as cells
         g1_bool [bool array] - 1D array with length equal to number of rows in G; labels group1
         g2_bool [bool array] - 1D array with length equal to number of rows in G; labels group2
-        
+
     Returns
     -------
         tt - t-statistic
@@ -676,58 +676,58 @@ def two_sample_ttest (G, g1_bool, g2_bool):
     dof = n1+n2-2
     # calculate p-value
     pp = 2*(1 - stats.t.cdf(np.abs(tt), dof))
-    
+
     return(tt, pp)
 
 
 def pool_multiple_stats(stat_dict):
     '''
     Pool stats across multiple imputations for t-test
-    
+
     Parameters
     ----------
         stat_dict [dict] - dictionary containing statistical testing results (generated in multiple_imputation_ttest())
-        
+
     Returns
     -------
         results_dict [dict] - dictionary containing the pooled statistics from using Rubin's rules
     '''
     from scipy import stats
-    
+
     # init results_dict
     results_dict = {}
     results_dict["tstat"] = {}
     results_dict["pvalue"] = {}
-    
+
     results_dict["varw"] = {}
     results_dict["varb"] = {}
     results_dict["poolmean"] = {}
-    
+
     for key in stat_dict["mean_difference"].keys():
-        
+
         d = len(stat_dict["mean_difference"][key])
-        
+
         # compute pooled terms
         pooled_mean = np.mean(np.vstack(stat_dict["mean_difference"][key]), axis=0)
         var_w = np.mean(np.vstack(stat_dict["standard_deviation"][key])**2, axis=0) # within-draw sample variance
         var_b = 1/(d-1) * np.sum((np.vstack(stat_dict["mean_difference"][key])-pooled_mean)**2, axis=0) # between-draw sample variance
         var_MI = var_w + (1+1/d)*var_b # multiple imputation variance
-        
+
         test_stat = pooled_mean / np.sqrt(var_MI) # pooled t statistic
-        
+
         # compute pvalue from T distribution
         dof = (d-1)*(1+(d*var_w)/((d+1)*var_b))**2 # degrees of freedom for T distribution
         pval = 2*(1 - stats.t.cdf(np.abs(test_stat), dof))
-        
+
         # Add test statistic and pvalue
         results_dict["tstat"][key] = test_stat
         results_dict["pvalue"][key] = pval
-        
+
         # Add intermediate stats (for debugging, etc)
         results_dict["varw"][key] = var_w
         results_dict["varb"][key] = var_b
         results_dict["poolmean"][key] = pooled_mean
-    
+
     return(results_dict)
 
 
@@ -737,7 +737,7 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_p
                  scale=True, tag="", return_weights=False,):
     '''
     Runs weighted PCA using the "wpca" package: https://github.com/jakevdp/wpca
-    
+
     Parameters
     ----------
         adata [AnnData] - should be the AnnData after running conformalize_prediction_interval()
@@ -759,21 +759,44 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_p
         scale [bool - whether to scale data with StandardScaler() before running WPCA
         tag [str] - additional tag to append to the obsm key for storing the PCs
         return_weights [bool] - whether to return weights used in WPCA
-     
+
     Returns
     -------
         Stores the result in adata.obsm["{imp_method}_predicted_expression_PC{n_components}_{tag}"]
         Optionally returns the array of weights used in WPCA
-    
+
     Refer to postprocess_weights() for order for weight calculations
     '''
     from wpca import PCA, WPCA, EMPCA
-    
+
+    # Compatibility shims for wpca 0.1 (unmaintained since 2016) with modern
+    # scikit-learn and scipy: translate the removed `force_all_finite` kwarg of
+    # check_array (replaced by `ensure_all_finite` in scikit-learn >= 1.6) and the
+    # removed `eigvals` kwarg of scipy.linalg.eigh (replaced by `subset_by_index`
+    # in scipy >= 1.5), which wpca still uses internally.
+    import types
+    import wpca.utils as _wpca_utils
+    import wpca.wpca as _wpca_wpca
+    import scipy.linalg as _scipy_linalg
+    _wpca_check_array_orig = _wpca_utils.check_array
+    def _wpca_check_array_compat(X, **kwargs):
+        if 'force_all_finite' in kwargs:
+            kwargs['ensure_all_finite'] = kwargs.pop('force_all_finite')
+        return _wpca_check_array_orig(X, **kwargs)
+    _wpca_utils.check_array = _wpca_check_array_compat
+    _wpca_wpca.check_array = _wpca_check_array_compat
+    _wpca_eigh_orig = _scipy_linalg.eigh
+    def _wpca_eigh_compat(a, **kwargs):
+        if 'eigvals' in kwargs:
+            kwargs['subset_by_index'] = kwargs.pop('eigvals')
+        return _wpca_eigh_orig(a, **kwargs)
+    _wpca_wpca.linalg = types.SimpleNamespace(eigh=_wpca_eigh_compat)
+
     predicted = f"{imp_method}_predicted_expression"
-    
+
     # get gene names/order
     genes = adata.obsm[predicted].columns
-    
+
     # determine weights
     if weighting == "inverse_pi_width":
         weights = 1/(adata.obsm[predicted+'_hi'][genes].values-adata.obsm[predicted+'_lo'][genes].values)
@@ -793,13 +816,13 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_p
         weights = postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform)
     else:
         raise Exception("weighting not recognized")
-    
+
     # scaling
     if scale is True:
         X = StandardScaler().fit_transform(adata.obsm[predicted].values)
     else:
         X = adata.obsm[predicted].values
-    
+
     # run weighted PCA
     if pca_method == "wpca":
         X_red = WPCA(n_components=n_components).fit_transform(X, weights=weights)
@@ -812,7 +835,7 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_p
         X_red = PCA(n_components=n_components).fit_transform(X * weights)
     else:
         raise Exception("pca_method not recognized")
-        
+
     # add PCs to adata
     adata.obsm[predicted+f"_PC{n_components}_{tag}"] = X_red
 
@@ -823,18 +846,18 @@ def weighted_PCA(adata, imp_method, pca_method="wpca", weighting="inverse_norm_p
 def postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binarize_ratio, log_transform):
     '''
     Method for postprocessing weights (filter with cutoff, replace inf, etc) for weighted_PCA()
-    
+
     Refer to weighted_pca() for details on arguments
     '''
     # cutoff weights
     if quantile_cutoff is not None:
         cutoff = np.nanquantile(weights, quantile_cutoff)
         weights[np.isfinite(weights) & (weights >= cutoff)] = cutoff
-    
+
     # log-transform
     if log_transform is True:
         weights = np.log1p(weights)
-    
+
     # binarize weights
     if binarize is True:
         from skimage.filters import threshold_otsu
@@ -847,7 +870,7 @@ def postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binariz
         cutoff = np.nanquantile(weights, binarize)
         weights[np.isfinite(weights) & (weights >= cutoff)] = 1
         weights[np.isfinite(weights) & (weights < cutoff)] = 1/binarize_ratio
-        
+
     # deal with infs (from division by zero)
     if replace_inf == "max":
         weights[~np.isfinite(weights)] = np.nanmax(weights[np.isfinite(weights)])
@@ -859,7 +882,7 @@ def postprocess_weights(weights, quantile_cutoff, replace_inf, binarize, binariz
         weights[~np.isfinite(weights)] = np.nanmedian(weights[np.isfinite(weights)])
     elif isinstance(replace_inf, float) or isinstance(replace_inf, int):
         weights[~np.isfinite(weights)] = replace_inf
-    
+
     return(weights)
 
 
@@ -867,7 +890,7 @@ def filtered_PCA(adata, imp_method, proportion=0.05, stratification=None, n_comp
                  tag="", return_keep_idxs=False):
     '''
     Runs filtered PCA using the TISSUE cell filtering approach
-    
+
     Parameters
     ----------
         adata [AnnData] - should be the AnnData after running conformalize_prediction_interval()
@@ -884,41 +907,41 @@ def filtered_PCA(adata, imp_method, proportion=0.05, stratification=None, n_comp
         normalize [bool] - whether to normalize prediction interval width by the absolute predicted expression value
         tag [str] - additional tag to append to the obsm key for storing the PCs
         return_keep_idxs [bool] - whether to return the keep_idxs for filtering
-    
+
     Returns
     -------
         Stores the result in adata.obsm["{imp_method}_predicted_expression_PC{n_components}_{tag}"]
         Optionally returns the indices corresponding to the observations to keep after filtering
-    '''    
+    '''
     predicted = f"{imp_method}_predicted_expression"
-    
+
     # get predicted expression matrices
     X = adata.obsm[predicted].values.copy()
-    
+
     # get uncertainty (PI width) for filtering
     X_uncertainty = adata.obsm[f'{predicted}_hi'].values - adata.obsm[f'{predicted}_lo'].values
     if normalize is True:
         X_uncertainty = X_uncertainty / (1+np.abs(adata.obsm[f'{predicted}'].values))
-    
+
     # filter cells
     keep_idxs = detect_uncertain_cells(X_uncertainty, proportion=proportion, stratification=stratification)
     X_filtered = X[keep_idxs,:].copy()
-    
+
     # scaling
     if scale is True:
         scaler = StandardScaler().fit(X_filtered)
         X = scaler.transform(X)
         X_filtered = scaler.transform(X_filtered)
-    
+
     # run PCA
     pca = PCA(n_components=n_components).fit(X_filtered)
     X_red = pca.transform(X)
     X_red_filtered = pca.transform(X_filtered)
-        
+
     # add PCs to adata
     adata.obsm[predicted+f"_PC{n_components}_{tag}"] = X_red
     adata.uns[predicted+f"_PC{n_components}_filtered_{tag}"] = X_red_filtered
-    
+
     if return_keep_idxs is True:
         return (keep_idxs)
 
@@ -926,33 +949,33 @@ def filtered_PCA(adata, imp_method, proportion=0.05, stratification=None, n_comp
 
 def detect_uncertain_cells (X, proportion=0.05, stratification=None):
     '''
-    Method for dropping a portion of the most uncertain cells from the input. 
-    
+    Method for dropping a portion of the most uncertain cells from the input.
+
     Parameters
     ----------
-        X [2d numpy array] - array of uncertainty values 
+        X [2d numpy array] - array of uncertainty values
         proportion [float] - between 0 and 1; proportion of most uncertain cells to drop
         stratification [None or 1d numpy array] - array of values to stratify the drop by
                                                 - same length as number of rows in X
                                                 - if None, no stratification
-        
+
     Returns
     -------
         keep_idxs [list] - array of row indices after dropping most uncertain cells
     '''
     from scipy.stats import zscore
-    
+
     if stratification is not None: # drop cells within each strata independently
-    
+
         drop_idxs = []
-        
+
         for strata in np.unique(stratification):
-            
+
             # compute scores
             X_strat = X[stratification==strata,:].copy() # calc gene z-scores
             orig_idxs = np.arange(X.shape[0])[stratification==strata]
             cell_scores = np.nanmean(zscore(X_strat, axis=0), axis=1) # average z-score for each cell
-            
+
             # determine cutoff score and indices to drop
             if (isinstance(proportion, float)) or (isinstance(proportion, int)):
                 cutoff_idx = int(np.ceil(proportion*len(cell_scores))) # number of cells to drop
@@ -963,16 +986,16 @@ def detect_uncertain_cells (X, proportion=0.05, stratification=None):
                 strata_drop_idxs = [i for i in range(len(cell_scores)) if cell_scores[i] > cutoff]
             else:
                 raise Exception("proportion specified not valid")
-                
+
             drop_idxs.append(orig_idxs[strata_drop_idxs]) # get idxs of highest scores
-            
+
         drop_idxs = list(np.concatenate(drop_idxs))
-    
+
     else:
-        
+
         # compute scores
         cell_scores = zscore(X, axis=0).mean(axis=1) # average z-score for each cell
-        
+
         # determine cutoff score and indices to drop
         if (isinstance(proportion, float)) or (isinstance(proportion, int)):
             cutoff_idx = int(np.ceil(proportion*len(cell_scores))) # number of cells to drop
@@ -980,11 +1003,11 @@ def detect_uncertain_cells (X, proportion=0.05, stratification=None):
         elif proportion == "otsu":
             from skimage.filters import threshold_otsu
             cutoff = threshold_otsu(cell_scores)
-            drop_idxs = [i for i in range(len(cell_scores)) if cell_scores[i] > cutoff] 
+            drop_idxs = [i for i in range(len(cell_scores)) if cell_scores[i] > cutoff]
         else:
             raise Exception("proportion specified not valid")
-    
+
     # return keep indices (determined as indices not in drop indices)
     keep_idxs = [i for i in range(X.shape[0]) if i not in drop_idxs]
-    
+
     return (keep_idxs)
